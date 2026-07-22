@@ -1,7 +1,8 @@
 # Periphery GitHub Actions
 
-The official reusable workflow for scanning a public repository with Periphery.
-It needs no Periphery account or secret.
+The official reusable workflow for scanning **public GitHub repositories** with
+Periphery. It is not available to private repositories. Public scans need no
+Periphery account or secret.
 
 Each workflow version uses the CLI release with the same version from
 [cli-releases](https://github.com/periphery-pro/cli-releases).
