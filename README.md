@@ -22,7 +22,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
-    uses: periphery-pro/actions/.github/workflows/scan.yml@v1.0.0.beta.1
+    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
 ```
 
 Stable releases also provide moving
