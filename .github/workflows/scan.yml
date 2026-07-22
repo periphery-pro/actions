@@ -33,7 +33,7 @@ jobs:
       - name: Scan
         run: '"$RUNNER_TEMP/periphery/periphery" scan --oss'
 
-      - name: Report OSS scan
+      - name: Report scan
         if: always()
         continue-on-error: true
         run: '"$RUNNER_TEMP/periphery/periphery" report-scan --oss'
