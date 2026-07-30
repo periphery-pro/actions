@@ -19,9 +19,9 @@ jobs:
 
       - name: Download Periphery CLI
         env:
-          PERIPHERY_VERSION: "1.0.0.beta.1"
-          PERIPHERY_ASSET: "periphery-cli_1.0.0.beta.1_macos_arm64.zip"
-          PERIPHERY_SHA256: "132fb5f0376027aed26bc2871fd651913d583abb6c5982a133c00fdb508df2e9"
+          PERIPHERY_VERSION: "1.0.0.beta.2"
+          PERIPHERY_ASSET: "periphery-cli_1.0.0.beta.2_macos_arm64.zip"
+          PERIPHERY_SHA256: "48b574a6f5c868e8a3e07e3f5afdab39734c3624b23fc84f2380e58c0a837cfd"
         run: |
           set -euo pipefail
           archive="$RUNNER_TEMP/$PERIPHERY_ASSET"
@@ -31,7 +31,7 @@ jobs:
           chmod +x "$RUNNER_TEMP/periphery/periphery"
 
       - name: Scan
-        run: '"$RUNNER_TEMP/periphery/periphery" scan --oss'
+        run: '"$RUNNER_TEMP/periphery/periphery" scan --oss --relative-results'
 
       - name: Report scan
         if: always()
