@@ -25,7 +25,7 @@ jobs:
           ref: ${{ github.sha }}
           persist-credentials: false
 
-      - name: Find merge-base baseline
+      - name: Find baseline
         id: baseline
         if: github.event_name == 'pull_request'
         env:
@@ -60,7 +60,7 @@ jobs:
             fi
           fi
 
-      - name: Download merge-base baseline
+      - name: Download baseline
         if: github.event_name == 'pull_request' && steps.baseline.outputs.available == 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
