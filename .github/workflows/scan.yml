@@ -32,6 +32,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          RUN_WITHOUT_BASELINE: ${{ inputs.run_without_baseline }}
         run: |
           set -euo pipefail
           merge_base="$(git merge-base "$HEAD_SHA" "$BASE_SHA")"
@@ -52,6 +53,11 @@ jobs:
             echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
           else
             echo "available=false" >> "$GITHUB_OUTPUT"
+            if [[ "$RUN_WITHOUT_BASELINE" == "true" ]]; then
+              echo "::notice title=Periphery baseline unavailable::No baseline is available for merge-base $merge_base. Running without a baseline."
+            else
+              echo "::notice title=Periphery scan skipped::No baseline is available for merge-base $merge_base."
+            fi
           fi
 
       - name: Download merge-base baseline
@@ -63,12 +69,6 @@ jobs:
           github-token: ${{ github.token }}
           repository: ${{ github.repository }}
           run-id: ${{ steps.baseline.outputs.run_id }}
-
-      - name: Baseline unavailable
-        if: github.event_name == 'pull_request' && steps.baseline.outputs.available != 'true' && !inputs.run_without_baseline
-        env:
-          MERGE_BASE: ${{ steps.baseline.outputs.merge_base }}
-        run: echo "::notice title=Periphery scan skipped::No baseline is available for merge-base $MERGE_BASE."
 
       - name: Download Periphery CLI
         if: github.event_name != 'pull_request' || steps.baseline.outputs.available == 'true' || inputs.run_without_baseline
