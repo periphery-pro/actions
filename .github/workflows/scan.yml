@@ -111,6 +111,7 @@ jobs:
           name: periphery-baseline-${{ github.sha }}
           path: ${{ runner.temp }}/periphery-baseline.json
           if-no-files-found: error
+          overwrite: true
           retention-days: 90
 
       - name: Report scan
