@@ -26,10 +26,12 @@ jobs:
 ```
 
 When the caller runs on pushes, the workflow records the scan results as a
-90-day baseline artifact keyed by the commit SHA. On pull requests, it finds
-the head branch's merge-base commit, downloads that commit's baseline, and
-only reports results introduced since then. Pull-request results use GitHub
-Actions annotations so they appear inline on the changed files.
+baseline artifact keyed by the commit SHA. Artifact retention follows the
+caller repository's GitHub Actions retention setting, which defaults to 90
+days for public repositories. On pull requests, the workflow finds the head
+branch's merge-base commit, downloads that commit's baseline, and only reports
+results introduced since then. Pull-request results use GitHub Actions
+annotations so they appear inline on the changed files.
 
 If the merge-base baseline is unavailable, the pull-request scan is skipped by
 default. Set `run_without_baseline` to `true` to run a full scan instead:

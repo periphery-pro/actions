@@ -112,7 +112,6 @@ jobs:
           path: ${{ runner.temp }}/periphery-baseline.json
           if-no-files-found: error
           overwrite: true
-          retention-days: 90
 
       - name: Report scan
         if: always() && steps.scan.outcome != 'skipped'
