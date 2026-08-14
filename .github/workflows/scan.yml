@@ -2,6 +2,12 @@ name: Periphery scan
 
 on:
   workflow_call:
+    inputs:
+      run_without_baseline:
+        description: Run pull-request scans when no merge-base baseline is available.
+        required: false
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -9,15 +15,63 @@ jobs:
   scan:
     runs-on: macos-15
     permissions:
+      actions: read
       contents: read
       id-token: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
+          fetch-depth: 0
           ref: ${{ github.sha }}
           persist-credentials: false
 
+      - name: Find merge-base baseline
+        id: baseline
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          merge_base="$(git merge-base "$HEAD_SHA" "$BASE_SHA")"
+          artifact_name="periphery-baseline-$merge_base"
+          export MERGE_BASE="$merge_base"
+          run_id="$(
+            gh api "/repos/$GITHUB_REPOSITORY/actions/artifacts?name=$artifact_name&per_page=100" \
+              --jq '[.artifacts[] | select(.expired == false and .workflow_run.head_sha == env.MERGE_BASE)] | sort_by(.created_at) | last | .workflow_run.id // empty'
+          )"
+
+          {
+            echo "artifact_name=$artifact_name"
+            echo "merge_base=$merge_base"
+          } >> "$GITHUB_OUTPUT"
+
+          if [[ -n "$run_id" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download merge-base baseline
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.available == 'true'
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: ${{ steps.baseline.outputs.artifact_name }}
+          path: ${{ runner.temp }}/periphery-baseline
+          github-token: ${{ github.token }}
+          repository: ${{ github.repository }}
+          run-id: ${{ steps.baseline.outputs.run_id }}
+
+      - name: Baseline unavailable
+        if: github.event_name == 'pull_request' && steps.baseline.outputs.available != 'true' && !inputs.run_without_baseline
+        env:
+          MERGE_BASE: ${{ steps.baseline.outputs.merge_base }}
+        run: echo "::notice title=Periphery scan skipped::No baseline is available for merge-base $MERGE_BASE."
+
       - name: Download Periphery CLI
+        if: github.event_name != 'pull_request' || steps.baseline.outputs.available == 'true' || inputs.run_without_baseline
         env:
           PERIPHERY_VERSION: "1.0.0.beta.3"
           PERIPHERY_ASSET: "periphery-cli_1.0.0.beta.3_macos_arm64.zip"
@@ -31,9 +85,35 @@ jobs:
           chmod +x "$RUNNER_TEMP/periphery/periphery"
 
       - name: Scan
-        run: '"$RUNNER_TEMP/periphery/periphery" scan --oss --relative-results'
+        id: scan
+        if: github.event_name != 'pull_request' || steps.baseline.outputs.available == 'true' || inputs.run_without_baseline
+        env:
+          BASELINE_AVAILABLE: ${{ steps.baseline.outputs.available }}
+        run: |
+          set -euo pipefail
+          args=(scan --oss --relative-results)
+
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            args+=(--format github-actions)
+            if [[ "$BASELINE_AVAILABLE" == "true" ]]; then
+              args+=(--baseline "$RUNNER_TEMP/periphery-baseline/periphery-baseline.json")
+            fi
+          elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            args+=(--write-baseline "$RUNNER_TEMP/periphery-baseline.json")
+          fi
+
+          "$RUNNER_TEMP/periphery/periphery" "${args[@]}"
+
+      - name: Upload baseline
+        if: always() && github.event_name == 'push'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: periphery-baseline-${{ github.sha }}
+          path: ${{ runner.temp }}/periphery-baseline.json
+          if-no-files-found: error
+          retention-days: 90
 
       - name: Report scan
-        if: always()
+        if: always() && steps.scan.outcome != 'skipped'
         continue-on-error: true
         run: '"$RUNNER_TEMP/periphery/periphery" report-scan --oss'

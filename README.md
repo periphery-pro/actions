@@ -19,9 +19,41 @@ being scanned.
 jobs:
   periphery:
     permissions:
+      actions: read
       contents: read
       id-token: write
     uses: periphery-pro/actions/.github/workflows/scan.yml@v1
+```
+
+When the caller runs on pushes, the workflow records the scan results as a
+90-day baseline artifact keyed by the commit SHA. On pull requests, it finds
+the head branch's merge-base commit, downloads that commit's baseline, and
+only reports results introduced since then. Pull-request results use GitHub
+Actions annotations so they appear inline on the changed files.
+
+If the merge-base baseline is unavailable, the pull-request scan is skipped by
+default. Set `run_without_baseline` to `true` to run a full scan instead:
+
+```yaml
+jobs:
+  periphery:
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
+    with:
+      run_without_baseline: true
+```
+
+The caller is responsible for selecting which pushes record baselines. A
+typical workflow runs for pull requests and for pushes to `main`:
+
+```yaml
+on:
+  pull_request:
+  push:
+    branches: [main]
 ```
 
 Stable releases also provide moving
