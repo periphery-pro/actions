@@ -11,9 +11,9 @@ For example, `@v1.0.0` downloads and runs CLI release `1.0.0`.
 
 The workflow checks out the caller repository and runs the scan from its root.
 Put your Periphery configuration in `.periphery.yml` at
-that root; the CLI discovers it automatically. The reusable workflow accepts no
-configuration inputs, so the configuration stays versioned with the repository
-being scanned.
+that root; the CLI discovers it automatically, so scan configuration stays
+versioned with the repository being scanned. Workflow behavior can be adjusted
+with the inputs below.
 
 ```yaml
 jobs:
@@ -24,6 +24,13 @@ jobs:
       id-token: write
     uses: periphery-pro/actions/.github/workflows/scan.yml@v1
 ```
+
+### Inputs
+
+| Input | Type | Default | Description |
+| --- | --- | --- | --- |
+| `fetch_depth` | number | `0` | Git history depth fetched from the pull-request head and base. `0` fetches the complete history; a positive value must be deep enough to include the merge base. |
+| `run_without_baseline` | boolean | `false` | Run a full pull-request scan when its merge-base baseline is unavailable. When `false`, the scan is skipped instead. |
 
 When the caller runs on pushes, the workflow records the scan results as a
 baseline artifact keyed by the commit SHA. Artifact retention follows the
