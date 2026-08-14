@@ -48,6 +48,23 @@ jobs:
       run_without_baseline: true
 ```
 
+The workflow fetches the complete Git history by default so it can reliably
+identify a pull request's merge base. Set `fetch_depth` to a positive number
+to limit the checkout history for large repositories. The configured depth
+must include the merge-base commit or baseline lookup will fail:
+
+```yaml
+jobs:
+  periphery:
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
+    with:
+      fetch_depth: 100
+```
+
 The caller is responsible for selecting which pushes record baselines. A
 typical workflow runs for pull requests and for pushes to `main`:
 
