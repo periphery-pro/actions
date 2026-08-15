@@ -8,6 +8,11 @@ on:
         required: false
         type: number
         default: 0
+      checkout_submodules:
+        description: Recursively check out the caller repository's Git submodules.
+        required: false
+        type: boolean
+        default: false
       periphery-version:
         description: Exact Periphery CLI release tag to use. Defaults to the latest release.
         required: false
@@ -33,6 +38,7 @@ jobs:
           fetch-depth: ${{ inputs.fetch_depth }}
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+          submodules: ${{ inputs.checkout_submodules && 'recursive' || 'false' }}
 
       - name: Find baseline
         id: baseline
