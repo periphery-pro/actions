@@ -1,7 +1,13 @@
 # Periphery GitHub Actions
 
 The official reusable workflow for scanning **public GitHub repositories** with
-Periphery. Public scans do not need a Periphery account.
+Periphery. On pull requests, it compares the scan with an automatically recorded
+baseline from the merge-base commit and reports only issues introduced by the
+pull request. Results appear as inline GitHub annotations, so a project can
+adopt Periphery without first fixing all of its existing unused code.
+
+Pushes maintain the baseline artifacts automatically, and public scans do not
+need a Periphery account.
 
 ## Configuration
 
