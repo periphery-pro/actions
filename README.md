@@ -3,12 +3,6 @@
 The official reusable workflow for scanning **public GitHub repositories** with
 Periphery. Public scans do not need a Periphery account.
 
-By default, the workflow downloads the latest stable CLI release from
-[cli-releases](https://github.com/periphery-pro/cli-releases). Until a stable
-release exists, it falls back to the most recent prerelease. This means the
-current `1.0.0.beta.N` releases are used automatically, and `1.0.0` will take
-precedence as soon as it is released.
-
 ## Configuration
 
 The workflow checks out the caller repository and runs the scan from its root.
@@ -34,6 +28,9 @@ jobs:
 | `fetch_depth` | number | `0` | Git history depth fetched from the pull-request head and base. `0` fetches the complete history; a positive value must be deep enough to include the merge base. |
 | `periphery-version` | string | latest | Exact Periphery CLI release tag to use. |
 | `run_without_baseline` | boolean | `false` | Run a full pull-request scan when its merge-base baseline is unavailable. When `false`, the scan is skipped instead. |
+
+By default, the workflow downloads the latest stable CLI release from
+[cli-releases](https://github.com/periphery-pro/cli-releases).
 
 When the caller runs on pushes, the workflow records the scan results as a
 baseline artifact keyed by the commit SHA. Artifact retention follows the
