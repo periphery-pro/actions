@@ -3,9 +3,11 @@
 The official reusable workflow for scanning **public GitHub repositories** with
 Periphery. Public scans do not need a Periphery account.
 
-Each workflow version uses the CLI release with the same version from
-[cli-releases](https://github.com/periphery-pro/cli-releases).
-For example, `@v1.0.0` downloads and runs CLI release `1.0.0`.
+By default, the workflow downloads the latest stable CLI release from
+[cli-releases](https://github.com/periphery-pro/cli-releases). Until a stable
+release exists, it falls back to the most recent prerelease. This means the
+current `1.0.0.beta.N` releases are used automatically, and `1.0.0` will take
+precedence as soon as it is released.
 
 ## Configuration
 
@@ -30,6 +32,7 @@ jobs:
 | Input | Type | Default | Description |
 | --- | --- | --- | --- |
 | `fetch_depth` | number | `0` | Git history depth fetched from the pull-request head and base. `0` fetches the complete history; a positive value must be deep enough to include the merge base. |
+| `periphery-version` | string | latest | Exact Periphery CLI release tag to use. |
 | `run_without_baseline` | boolean | `false` | Run a full pull-request scan when its merge-base baseline is unavailable. When `false`, the scan is skipped instead. |
 
 When the caller runs on pushes, the workflow records the scan results as a
@@ -72,6 +75,20 @@ jobs:
       fetch_depth: 100
 ```
 
+To use a particular CLI release instead of the latest available release:
+
+```yaml
+jobs:
+  periphery:
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
+    with:
+      periphery-version: 1.0.0.beta.3
+```
+
 The caller is responsible for selecting which pushes record baselines. A
 typical workflow runs for pull requests and for pushes to `main`:
 
@@ -82,7 +99,5 @@ on:
     branches: [main]
 ```
 
-Stable releases also provide moving
-major (`@v1`) and major-minor (`@v1.2`) tags for users who deliberately opt in
-to the latest compatible workflow release; those tags always point to the
-matching latest CLI release in that channel.
+Stable releases also provide moving major (`@v1`) and major-minor (`@v1.2`)
+workflow tags.

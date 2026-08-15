@@ -8,6 +8,10 @@ on:
         required: false
         type: number
         default: 0
+      periphery-version:
+        description: Exact Periphery CLI release tag to use. Defaults to the latest release.
+        required: false
+        type: string
       run_without_baseline:
         description: Run pull-request scans when no merge-base baseline is available.
         required: false
@@ -82,14 +86,50 @@ jobs:
       - name: Download Periphery CLI
         if: github.event_name != 'pull_request' || steps.baseline.outputs.available == 'true' || inputs.run_without_baseline
         env:
-          PERIPHERY_VERSION: "1.0.0.beta.3"
-          PERIPHERY_ASSET: "periphery-cli_1.0.0.beta.3_macos_arm64.zip"
-          PERIPHERY_SHA256: "cb64814d35ea782f4cbd8544cf2f801798126668bfd177729a3ce735281410e8"
+          GITHUB_TOKEN: ${{ github.token }}
+          PERIPHERY_VERSION: ${{ inputs.periphery-version }}
         run: |
           set -euo pipefail
-          archive="$RUNNER_TEMP/$PERIPHERY_ASSET"
-          curl --fail --location --retry 3 --output "$archive" "https://github.com/periphery-pro/cli-releases/releases/download/$PERIPHERY_VERSION/$PERIPHERY_ASSET"
-          printf '%s  %s\n' "$PERIPHERY_SHA256" "$archive" | shasum -a 256 --check
+          releases_url="https://api.github.com/repos/periphery-pro/cli-releases/releases"
+          version="$PERIPHERY_VERSION"
+          api_args=(
+            --header "Accept: application/vnd.github+json"
+            --header "Authorization: Bearer $GITHUB_TOKEN"
+            --header "X-GitHub-Api-Version: 2022-11-28"
+            --location
+            --retry 3
+            --silent
+            --show-error
+          )
+
+          if [[ -n "$version" ]]; then
+            release="$(curl --fail "${api_args[@]}" "$releases_url/tags/$version")"
+          else
+            release_file="$RUNNER_TEMP/periphery-release.json"
+            status="$(curl "${api_args[@]}" --output "$release_file" --write-out '%{http_code}' "$releases_url/latest")"
+            case "$status" in
+              200)
+                release="$(<"$release_file")"
+                ;;
+              404)
+                release="$(curl --fail "${api_args[@]}" "$releases_url?per_page=1" | jq -ce 'first')"
+                ;;
+              *)
+                echo "Failed to resolve the latest Periphery release (HTTP $status)" >&2
+                exit 1
+                ;;
+            esac
+          fi
+
+          asset="$(jq -cer '[.assets[] | select(.name | test("^periphery-cli_.*_macos_arm64\\.zip$"))] | first' <<< "$release")"
+          asset_name="$(jq -r '.name' <<< "$asset")"
+          asset_url="$(jq -r '.browser_download_url' <<< "$asset")"
+          asset_digest="$(jq -r '.digest // empty' <<< "$asset")"
+          [[ "$asset_digest" == sha256:* ]] || { echo "Release asset is missing a SHA-256 digest: $asset_name" >&2; exit 1; }
+
+          archive="$RUNNER_TEMP/$asset_name"
+          curl --fail --location --retry 3 --silent --show-error --output "$archive" "$asset_url"
+          printf '%s  %s\n' "${asset_digest#sha256:}" "$archive" | shasum -a 256 --check
           unzip -q "$archive" -d "$RUNNER_TEMP/periphery"
           chmod +x "$RUNNER_TEMP/periphery/periphery"
 
