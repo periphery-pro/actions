@@ -1,7 +1,10 @@
 # Periphery GitHub Actions
 
 The official reusable workflow for scanning **public GitHub repositories** with
-Periphery. Public scans do not need a Periphery account.
+Periphery. On pull requests, it compares the scan with an automatically recorded
+baseline from the merge-base commit and reports only issues introduced by the
+pull request. Results appear as inline GitHub annotations, so a project can
+adopt Periphery without first fixing all of its existing unused code.
 
 ## Configuration
 
@@ -31,14 +34,6 @@ jobs:
 
 By default, the workflow downloads the latest stable CLI release from
 [cli-releases](https://github.com/periphery-pro/cli-releases).
-
-When the caller runs on pushes, the workflow records the scan results as a
-baseline artifact keyed by the commit SHA. Artifact retention follows the
-caller repository's GitHub Actions retention setting, which defaults to 90
-days for public repositories. On pull requests, the workflow finds the head
-branch's merge-base commit, downloads that commit's baseline, and only reports
-results introduced since then. Pull-request results use GitHub Actions
-annotations so they appear inline on the changed files.
 
 If the merge-base baseline is unavailable, the pull-request scan is skipped by
 default. Set `run_without_baseline` to `true` to run a full scan instead:
@@ -86,8 +81,11 @@ jobs:
       periphery-version: 1.0.0.beta.3
 ```
 
-The caller is responsible for selecting which pushes record baselines. A
-typical workflow runs for pull requests and for pushes to `main`:
+The caller is responsible for selecting which pushes record baselines. Each
+baseline artifact is keyed by commit SHA and follows the caller repository's
+GitHub Actions retention setting, which defaults to 90 days for public
+repositories. A typical workflow runs for pull requests and for pushes to
+`main`:
 
 ```yaml
 on:
