@@ -98,7 +98,6 @@ jobs:
     uses: periphery-pro/actions/.github/workflows/scan.yml@v1
     with:
       setup: |
-        ./scripts/ensure-ghosttykit.sh
         ./scripts/prepare-periphery-scan.sh
 ```
 
