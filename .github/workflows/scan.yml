@@ -13,6 +13,11 @@ on:
         required: false
         type: boolean
         default: false
+      setup:
+        description: Bash script to run in the caller repository before scanning.
+        required: false
+        type: string
+        default: ""
       periphery-version:
         description: Exact Periphery CLI release tag to use. Defaults to the latest release.
         required: false
@@ -39,6 +44,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           submodules: ${{ inputs.checkout_submodules && 'recursive' || 'false' }}
+
+      - name: Run setup
+        if: inputs.setup != ''
+        env:
+          SETUP: ${{ inputs.setup }}
+        run: |
+          bash -euo pipefail -c "$SETUP"
 
       - name: Find baseline
         id: baseline

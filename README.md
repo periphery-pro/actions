@@ -30,6 +30,7 @@ jobs:
 | --- | --- | --- | --- |
 | `fetch_depth` | number | `0` | Git history depth fetched from the pull-request head and base. `0` fetches the complete history; a positive value must be deep enough to include the merge base. |
 | `checkout_submodules` | boolean | `false` | Recursively check out Git submodules before scanning. |
+| `setup` | string | empty | Bash script to run after checkout and before scanning. |
 | `periphery-version` | string | latest | Exact Periphery CLI release tag to use. |
 | `run_without_baseline` | boolean | `false` | Run a full pull-request scan when its merge-base baseline is unavailable. When `false`, the scan is skipped instead. |
 
@@ -70,6 +71,8 @@ jobs:
 
 If the project relies on Git submodules, enable their recursive checkout:
 
+If the project relies on Git submodules, enable their recursive checkout:
+
 ```yaml
 jobs:
   periphery:
@@ -80,6 +83,23 @@ jobs:
     uses: periphery-pro/actions/.github/workflows/scan.yml@v1
     with:
       checkout_submodules: true
+```
+
+For projects that need build prerequisites, run a Bash setup script from the
+checked-out repository before the scan. It can invoke multiple project scripts:
+
+```yaml
+jobs:
+  periphery:
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
+    with:
+      setup: |
+        ./scripts/ensure-ghosttykit.sh
+        ./scripts/prepare-periphery-scan.sh
 ```
 
 To use a particular CLI release instead of the latest available release:
