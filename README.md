@@ -26,6 +26,7 @@ jobs:
 | Input | Type | Default | Description |
 | --- | --- | --- | --- |
 | `fetch_depth` | number | `0` | Git history depth fetched from the pull-request head and base. `0` fetches the complete history; a positive value must be deep enough to include the merge base. |
+| `checkout_submodules` | boolean | `false` | Recursively check out Git submodules before scanning. |
 | `periphery-version` | string | latest | Exact Periphery CLI release tag to use. |
 | `run_without_baseline` | boolean | `false` | Run a full pull-request scan when its merge-base baseline is unavailable. When `false`, the scan is skipped instead. |
 
@@ -70,6 +71,20 @@ jobs:
     uses: periphery-pro/actions/.github/workflows/scan.yml@v1
     with:
       fetch_depth: 100
+```
+
+If the project relies on Git submodules, enable their recursive checkout:
+
+```yaml
+jobs:
+  periphery:
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
+    with:
+      checkout_submodules: true
 ```
 
 To use a particular CLI release instead of the latest available release:
