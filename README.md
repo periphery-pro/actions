@@ -31,7 +31,7 @@ jobs:
 | `fetch_depth` | number | `0` | Git history depth fetched from the pull-request head and base. `0` fetches the complete history; a positive value must be deep enough to include the merge base. |
 | `checkout_submodules` | boolean | `false` | Recursively check out Git submodules before scanning. |
 | `setup` | string | empty | Bash script to run after checkout and before scanning. |
-| `periphery-version` | string | latest | Exact Periphery CLI release tag to use. |
+| `periphery_version` | string | latest | Exact Periphery CLI release tag to use. |
 | `run_without_baseline` | boolean | `false` | Run a full pull-request scan when its merge-base baseline is unavailable. When `false`, the scan is skipped instead. |
 
 By default, the workflow downloads the latest stable CLI release from
@@ -112,7 +112,7 @@ jobs:
       id-token: write
     uses: periphery-pro/actions/.github/workflows/scan.yml@v1
     with:
-      periphery-version: 1.0.0.beta.3
+      periphery_version: 1.0.0
 ```
 
 The caller is responsible for selecting which pushes record baselines. Each

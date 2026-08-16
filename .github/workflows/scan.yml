@@ -18,7 +18,7 @@ on:
         required: false
         type: string
         default: ""
-      periphery-version:
+      periphery_version:
         description: Exact Periphery CLI release tag to use. Defaults to the latest release.
         required: false
         type: string
@@ -105,7 +105,7 @@ jobs:
         if: github.event_name != 'pull_request' || steps.baseline.outputs.available == 'true' || inputs.run_without_baseline
         env:
           GITHUB_TOKEN: ${{ github.token }}
-          PERIPHERY_VERSION: ${{ inputs.periphery-version }}
+          PERIPHERY_VERSION: ${{ inputs.periphery_version }}
         run: |
           set -euo pipefail
           releases_url="https://api.github.com/repos/periphery-pro/cli-releases/releases"
