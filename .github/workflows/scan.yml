@@ -174,13 +174,16 @@ jobs:
       - name: Write job summary
         if: always() && github.event_name == 'pull_request' && steps.scan.outcome != 'skipped'
         env:
+          BASELINE_AVAILABLE: ${{ steps.baseline.outputs.available }}
           BLOB_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
+          COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit
+          MERGE_BASE: ${{ steps.baseline.outputs.merge_base }}
         run: |
           set -euo pipefail
           output="$RUNNER_TEMP/periphery-output.txt"
           [[ -f "$output" ]] || exit 0
 
-          awk -v blob="$BLOB_URL" '
+          awk -v available="$BASELINE_AVAILABLE" -v blob="$BLOB_URL" -v commit="$COMMIT_URL" -v mergeBase="$MERGE_BASE" '
             /^::warning file=/ {
               rest = substr($0, 11)
               sep = index(rest, "::")
@@ -194,14 +197,29 @@ jobs:
             END {
               print "## Periphery"
               print ""
+
+              qualifier = (available == "true") ? "new " : ""
+
               if (count == 0) {
-                print "No new unused code detected."
-                exit
+                printf "No %sunused code detected.\n", qualifier
+              } else {
+                printf "**%d %s%s.**\n", count, qualifier, (count == 1 ? "result" : "results")
               }
-              printf "**%d new %s.**\n\n", count, (count == 1 ? "result" : "results")
-              print "| Result | Location |"
-              print "| :- | :- |"
+
+              print ""
+
+              if (available == "true") {
+                printf "Compared with the baseline from [`%s`](%s/%s).\n", substr(mergeBase, 1, 7), commit, mergeBase
+              } else {
+                print "No baseline was available, so every result is reported."
+              }
+
               for (i = 1; i <= count; i++) {
+                if (i == 1) {
+                  print ""
+                  print "| Result | Location |"
+                  print "| :- | :- |"
+                }
                 printf "| %s | [`%s:%s`](%s/%s#L%s) |\n", message[i], file[i], line[i], blob, file[i], line[i]
               }
             }
