@@ -1,4 +1,4 @@
-# <img src="assets/logo.svg" width="32" align="top" alt=""> Periphery GitHub Actions
+# Periphery GitHub Actions
 
 The official reusable workflow for scanning **public GitHub repositories** with
 Periphery. On pull requests, it compares the scan with an automatically recorded
