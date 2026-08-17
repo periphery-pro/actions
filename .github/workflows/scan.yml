@@ -205,7 +205,7 @@ jobs:
                 printf "| %s | [`%s:%s`](%s/%s#L%s) |\n", message[i], file[i], line[i], blob, file[i], line[i]
               }
             }
-          ' "$output" >> "$GITHUB_STEP_SUMMARY"
+          ' "$output" | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload baseline
         if: always() && github.event_name == 'push'
