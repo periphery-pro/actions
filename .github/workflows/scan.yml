@@ -177,6 +177,7 @@ jobs:
           BASELINE_AVAILABLE: ${{ steps.baseline.outputs.available }}
           BLOB_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
           COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit
+          JOB_WORKFLOW_SHA: ${{ github.job_workflow_sha }}
           MERGE_BASE: ${{ steps.baseline.outputs.merge_base }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
@@ -188,7 +189,10 @@ jobs:
           mkdir -p "$payload"
           printf '%s\n' "$PR_NUMBER" > "$payload/pr-number"
 
-          awk -v available="$BASELINE_AVAILABLE" -v blob="$BLOB_URL" -v commit="$COMMIT_URL" -v mergeBase="$MERGE_BASE" '
+          # Pin the logo to the commit of this workflow so it always matches the version in use.
+          logo="https://raw.githubusercontent.com/periphery-pro/actions/${JOB_WORKFLOW_SHA:-main}/assets/logo.svg"
+
+          awk -v available="$BASELINE_AVAILABLE" -v blob="$BLOB_URL" -v commit="$COMMIT_URL" -v logo="$logo" -v mergeBase="$MERGE_BASE" '
             /^::warning file=/ {
               rest = substr($0, 11)
               sep = index(rest, "::")
@@ -200,7 +204,7 @@ jobs:
               line[count] = substr(field[2], 6)
             }
             END {
-              print "## Unused Code Report"
+              printf "## <img src=\"%s\" width=\"24\" align=\"top\" alt=\"\"> Unused Code Report\n", logo
               print ""
 
               qualifier = (available == "true") ? "new " : ""
