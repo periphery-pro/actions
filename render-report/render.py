@@ -110,32 +110,28 @@ def render_results(blocks, results, blob_url, budget):
 
 
 def render(blocks, results, *, baseline_commit, blob_url, budget, commit_url, logo_url):
-    qualifier = "new " if baseline_commit else ""
-
-    if results:
-        headline = blocks.render(
-            "headline_results",
-            count=len(results),
-            qualifier=qualifier,
-            noun="result" if len(results) == 1 else "results",
-        )
-    else:
-        headline = blocks.render("headline_empty", qualifier=qualifier)
+    name = "headline_results" if results else "headline_empty"
+    fields = {}
 
     if baseline_commit:
-        baseline = blocks.render(
-            "baseline_available",
-            commit_url=commit_url,
-            sha=baseline_commit,
-            short_sha=baseline_commit[:7],
-        )
+        fields = {
+            "commit_url": commit_url,
+            "sha": baseline_commit,
+            "short_sha": baseline_commit[:7],
+        }
     else:
-        baseline = blocks["baseline_missing"]
+        name += "_without_baseline"
+
+    if results:
+        fields.update(
+            count=len(results),
+            noun="result" if len(results) == 1 else "results",
+        )
 
     document = blocks.render(
         "document",
-        baseline=baseline,
-        headline=headline,
+        footer=blocks["footer"],
+        headline=blocks.render(name, **fields),
         logo_url=logo_url,
         results=render_results(blocks, results, blob_url, budget),
     )
