@@ -27,6 +27,11 @@ on:
         required: false
         type: boolean
         default: false
+      post_comment:
+        description: Publish the report so a workflow_run workflow can post it as a pull-request comment.
+        required: false
+        type: boolean
+        default: true
 
 permissions: {}
 
@@ -183,7 +188,7 @@ jobs:
           target: summary
 
       - name: Render pull-request comment
-        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success' && inputs.post_comment
         uses: periphery-pro/actions/render-report@feat/job-summary
         with:
           annotations: ${{ runner.temp }}/periphery-output.txt
@@ -195,6 +200,15 @@ jobs:
 
       - name: Write job summary
         if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
+        run: |
+          set -euo pipefail
+          summary="$RUNNER_TEMP/periphery-summary.md"
+          [[ -f "$summary" ]] || exit 0
+
+          cat "$summary" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Name the pull request in the comment payload
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success' && inputs.post_comment
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
@@ -203,10 +217,9 @@ jobs:
           [[ -f "$payload/comment.md" ]] || exit 0
 
           printf '%s\n' "$PR_NUMBER" > "$payload/pr-number"
-          cat "$RUNNER_TEMP/periphery-summary.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload comment payload
-        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success' && inputs.post_comment
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: periphery-comment
