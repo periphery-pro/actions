@@ -200,7 +200,7 @@ jobs:
               line[count] = substr(field[2], 6)
             }
             END {
-              print "## Periphery"
+              print "## Unused Code Report"
               print ""
 
               qualifier = (available == "true") ? "new " : ""
