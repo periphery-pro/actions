@@ -86,7 +86,11 @@ def render_results(blocks, results, blob_url, budget):
 
     header = blocks["results_header"]
     rows = []
-    used = len(header.encode("utf-8")) + 1000
+
+    # Reserve the note that appears if the table is cut short, so adding it can never
+    # push the document past the budget.
+    note = blocks.render("results_truncated", shown=len(results), total=len(results))
+    used = len(header.encode("utf-8")) + len(note.encode("utf-8")) + 4
 
     for result in results:
         row = blocks.render(
@@ -116,7 +120,18 @@ def render_results(blocks, results, blob_url, budget):
     return body
 
 
-def bug_report_url(blocks, *, commit, pull_request, repository, run_url, toolchain):
+def bug_report_url(
+    blocks,
+    *,
+    commit,
+    commit_url,
+    pull_request,
+    pull_request_url,
+    repository,
+    repository_url,
+    run_url,
+    toolchain,
+):
     """Build a link that opens the bug report form with the scan context filled in."""
     query = {
         "template": ISSUE_FORM_TEMPLATE,
@@ -126,8 +141,13 @@ def bug_report_url(blocks, *, commit, pull_request, repository, run_url, toolcha
         "environment": blocks.render(
             "bug_report_environment",
             commit=commit,
+            commit_url=commit_url,
+            pull_request=pull_request,
+            pull_request_url=pull_request_url,
             repository=repository,
+            repository_url=repository_url,
             run_url=run_url,
+            short_commit=commit[:7],
             toolchain=toolchain.strip(),
         ),
     }
@@ -145,7 +165,9 @@ def render(
     commit,
     commit_url,
     pull_request,
+    pull_request_url,
     repository,
+    repository_url,
     run_url,
     toolchain,
 ):
@@ -167,25 +189,34 @@ def render(
             noun="result" if len(results) == 1 else "results",
         )
 
-    document = blocks.render(
-        "document",
-        footer=blocks.render(
-            "footer",
-            bug_report_url=bug_report_url(
-                blocks,
-                commit=commit,
-                pull_request=pull_request,
-                repository=repository,
-                run_url=run_url,
-                toolchain=toolchain,
-            ),
+    footer = blocks.render(
+        "footer",
+        bug_report_url=bug_report_url(
+            blocks,
+            commit=commit,
+            commit_url=commit_url,
+            pull_request=pull_request,
+            pull_request_url=pull_request_url,
+            repository=repository,
+            repository_url=repository_url,
+            run_url=run_url,
+            toolchain=toolchain,
         ),
-        headline=blocks.render(name, **fields),
-        results=render_results(blocks, results, blob_url, budget),
     )
+    headline = blocks.render(name, **fields)
 
-    # Drop the blank line left behind when a section renders empty.
-    return re.sub(r"\n{3,}", "\n\n", document).strip() + "\n"
+    def document(table):
+        rendered = blocks.render(
+            "document", footer=footer, headline=headline, results=table
+        )
+        # Drop the blank line left behind when a section renders empty.
+        return re.sub(r"\n{3,}", "\n\n", rendered).strip() + "\n"
+
+    # Everything outside the table is measured rather than estimated, because the
+    # footer carries a bug report URL whose length depends on the recorded versions.
+    overhead = len(document("").encode("utf-8"))
+
+    return document(render_results(blocks, results, blob_url, budget - overhead))
 
 
 def main():
@@ -223,7 +254,9 @@ def main():
         commit=os.environ["COMMIT"],
         commit_url=os.environ["COMMIT_URL"],
         pull_request=os.environ["PULL_REQUEST"],
+        pull_request_url=os.environ["PULL_REQUEST_URL"],
         repository=os.environ["REPOSITORY"],
+        repository_url=os.environ["REPOSITORY_URL"],
         run_url=os.environ["RUN_URL"],
         toolchain=toolchain,
     )

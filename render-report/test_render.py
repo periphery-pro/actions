@@ -18,7 +18,9 @@ CONTEXT = {
     "commit": "2b8bde259f74b508ac116633ef9a1e9c7db72dfd",
     "commit_url": "https://github.com/o/r/commit",
     "pull_request": "10",
+    "pull_request_url": "https://github.com/periphery-pro/actions-test/pull/10",
     "repository": "periphery-pro/actions-test",
+    "repository_url": "https://github.com/periphery-pro/actions-test",
     "run_url": "https://github.com/o/r/actions/runs/99",
     "toolchain": "Periphery 1.1.0\nSwift 6.0.3",
 }
@@ -204,9 +206,16 @@ class RenderTest(unittest.TestCase):
     def test_bug_report_carries_the_scan_context(self):
         document = self.render([])
 
-        for expected in ["Periphery 1.1.0", "Swift 6.0.3", "Repository: periphery-pro/actions-test",
-                         "Commit: 2b8bde259f74b508ac116633ef9a1e9c7db72dfd",
-                         "Run: https://github.com/o/r/actions/runs/99"]:
+        for expected in [
+            "Periphery 1.1.0",
+            "Swift 6.0.3",
+            "Repository: [periphery-pro/actions-test](https://github.com/periphery-pro/actions-test)",
+            "Pull request: [periphery-pro/actions-test#10]"
+            "(https://github.com/periphery-pro/actions-test/pull/10)",
+            "Commit: [2b8bde2](https://github.com/o/r/commit/"
+            "2b8bde259f74b508ac116633ef9a1e9c7db72dfd)",
+            "Run: https://github.com/o/r/actions/runs/99",
+        ]:
             self.assertIn(quote_plus(expected), document)
 
     def test_bug_report_url_is_percent_encoded(self):
@@ -249,6 +258,28 @@ class TruncationTest(unittest.TestCase):
         self.assertGreater(len(document), render.COMMENT_LIMIT)
         self.assertLess(len(document.encode("utf-8")), render.JOB_SUMMARY_LIMIT)
 
+    def test_document_never_exceeds_the_budget(self):
+        for budget in (render.BUDGETS["comment"], render.BUDGETS["summary"]):
+            with self.subTest(budget=budget):
+                document = self.render_within(budget, annotations(20_000))
+
+                self.assertLessEqual(len(document.encode("utf-8")), budget)
+
+    def test_budget_absorbs_a_large_bug_report_link(self):
+        # The footer carries a URL whose length depends on the recorded versions,
+        # so the space outside the table cannot be a fixed allowance.
+        context = {**CONTEXT, "toolchain": "x" * 5_000}
+        document = render.render(
+            blocks(),
+            annotations(20_000),
+            baseline_commit="",
+            budget=render.BUDGETS["comment"],
+            **context,
+        )
+
+        self.assertLessEqual(len(document.encode("utf-8")), render.BUDGETS["comment"])
+        self.assertIn("of 20000 results.", document)
+
     def test_emits_every_result_when_they_fit(self):
         document = self.render_within(render.BUDGETS["summary"], annotations(3))
 
@@ -283,7 +314,9 @@ class MainTest(unittest.TestCase):
             "COMMIT": CONTEXT["commit"],
             "COMMIT_URL": CONTEXT["commit_url"],
             "PULL_REQUEST": CONTEXT["pull_request"],
+            "PULL_REQUEST_URL": CONTEXT["pull_request_url"],
             "REPOSITORY": CONTEXT["repository"],
+            "REPOSITORY_URL": CONTEXT["repository_url"],
             "RUN_URL": CONTEXT["run_url"],
             "OUTPUT": str(output_path),
             "TARGET": target,

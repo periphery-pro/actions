@@ -44,6 +44,7 @@ $toolchain
 
 Scan context
 ------------
-Repository: $repository
-Commit: $commit
+Repository: [$repository]($repository_url)
+Pull request: [$repository#$pull_request]($pull_request_url)
+Commit: [$short_commit]($commit_url/$commit)
 Run: $run_url

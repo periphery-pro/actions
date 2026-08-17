@@ -24,8 +24,14 @@ inputs:
   pull_request:
     description: Number of the pull request being scanned.
     required: true
+  pull_request_url:
+    description: URL of the pull request being scanned.
+    required: true
   repository:
     description: Repository being scanned, as owner/name.
+    required: true
+  repository_url:
+    description: URL of the repository being scanned.
     required: true
   run_url:
     description: URL of the workflow run that produced the report.
@@ -50,7 +56,9 @@ runs:
         COMMIT_URL: ${{ inputs.commit_url }}
         OUTPUT: ${{ inputs.output }}
         PULL_REQUEST: ${{ inputs.pull_request }}
+        PULL_REQUEST_URL: ${{ inputs.pull_request_url }}
         REPOSITORY: ${{ inputs.repository }}
+        REPOSITORY_URL: ${{ inputs.repository_url }}
         RUN_URL: ${{ inputs.run_url }}
         TARGET: ${{ inputs.target }}
         TOOLCHAIN_FILE: ${{ inputs.toolchain_file }}
