@@ -128,7 +128,6 @@ def bug_report_url(
     pull_request,
     pull_request_url,
     repository,
-    repository_url,
     run_url,
     toolchain,
 ):
@@ -145,7 +144,6 @@ def bug_report_url(
             pull_request=pull_request,
             pull_request_url=pull_request_url,
             repository=repository,
-            repository_url=repository_url,
             run_url=run_url,
             short_commit=commit[:7],
             toolchain=toolchain.strip(),
@@ -167,7 +165,6 @@ def render(
     pull_request,
     pull_request_url,
     repository,
-    repository_url,
     run_url,
     toolchain,
 ):
@@ -198,7 +195,6 @@ def render(
             pull_request=pull_request,
             pull_request_url=pull_request_url,
             repository=repository,
-            repository_url=repository_url,
             run_url=run_url,
             toolchain=toolchain,
         ),
@@ -256,7 +252,6 @@ def main():
         pull_request=os.environ["PULL_REQUEST"],
         pull_request_url=os.environ["PULL_REQUEST_URL"],
         repository=os.environ["REPOSITORY"],
-        repository_url=os.environ["REPOSITORY_URL"],
         run_url=os.environ["RUN_URL"],
         toolchain=toolchain,
     )

@@ -202,7 +202,6 @@ jobs:
           pull_request: ${{ github.event.pull_request.number }}
           pull_request_url: ${{ github.event.pull_request.html_url }}
           repository: ${{ github.repository }}
-          repository_url: ${{ github.server_url }}/${{ github.repository }}
           run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           target: summary
           toolchain_file: ${{ runner.temp }}/periphery-toolchain.txt
@@ -220,7 +219,6 @@ jobs:
           pull_request: ${{ github.event.pull_request.number }}
           pull_request_url: ${{ github.event.pull_request.html_url }}
           repository: ${{ github.repository }}
-          repository_url: ${{ github.server_url }}/${{ github.repository }}
           run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           target: comment
           toolchain_file: ${{ runner.temp }}/periphery-toolchain.txt

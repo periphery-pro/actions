@@ -20,7 +20,6 @@ CONTEXT = {
     "pull_request": "10",
     "pull_request_url": "https://github.com/periphery-pro/actions-test/pull/10",
     "repository": "periphery-pro/actions-test",
-    "repository_url": "https://github.com/periphery-pro/actions-test",
     "run_url": "https://github.com/o/r/actions/runs/99",
     "toolchain": "Periphery 1.1.0\nSwift 6.0.3",
 }
@@ -199,7 +198,7 @@ class RenderTest(unittest.TestCase):
 
     def test_bug_report_title_names_the_repository_and_pull_request(self):
         self.assertIn(
-            quote_plus("periphery-pro/actions-test#10"),
+            quote_plus("Inaccurate result in periphery-pro/actions-test#10"),
             self.render([]),
         )
 
@@ -209,7 +208,6 @@ class RenderTest(unittest.TestCase):
         for expected in [
             "Periphery 1.1.0",
             "Swift 6.0.3",
-            "Repository: [periphery-pro/actions-test](https://github.com/periphery-pro/actions-test)",
             "Pull request: [periphery-pro/actions-test#10]"
             "(https://github.com/periphery-pro/actions-test/pull/10)",
             "Commit: [2b8bde2](https://github.com/o/r/commit/"
@@ -316,7 +314,6 @@ class MainTest(unittest.TestCase):
             "PULL_REQUEST": CONTEXT["pull_request"],
             "PULL_REQUEST_URL": CONTEXT["pull_request_url"],
             "REPOSITORY": CONTEXT["repository"],
-            "REPOSITORY_URL": CONTEXT["repository_url"],
             "RUN_URL": CONTEXT["run_url"],
             "OUTPUT": str(output_path),
             "TARGET": target,

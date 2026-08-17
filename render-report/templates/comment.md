@@ -37,14 +37,13 @@ _Showing $shown of $total results. The full list is in the scan log._
 > Scanned by [Periphery](https://github.com/periphery-pro/actions) · [Report a bug]($bug_report_url)
 
 [bug_report_title]
-$repository#$pull_request
+Inaccurate result in $repository#$pull_request
 
 [bug_report_environment]
 $toolchain
 
 Scan context
 ------------
-Repository: [$repository]($repository_url)
 Pull request: [$repository#$pull_request]($pull_request_url)
 Commit: [$short_commit]($commit_url/$commit)
 Run: $run_url
