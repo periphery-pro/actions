@@ -3,7 +3,7 @@ ignored, so this paragraph is a comment. Placeholders use $name and are
 substituted by render.py; write $$ for a literal dollar sign.
 
 [document]
-## <img src="$logo_url" width="24" align="top" alt=""> Unused Code Report
+## Unused Code Report
 
 $headline
 
@@ -28,7 +28,7 @@ No unused code detected.
 | :- | :- |
 
 [results_row]
-| `$message` | [`$path:$line`]($blob_url/$path#L$line) |
+| `$message` | [`$path:$line`]($blob_url/$path_url#L$line) |
 
 [results_truncated]
 _Showing $shown of $total results. The full list is in the scan log._

@@ -10,6 +10,7 @@ import re
 import sys
 from pathlib import Path
 from string import Template
+from urllib.parse import quote
 
 # GitHub renders nothing at all once a job summary exceeds 1 MiB.
 JOB_SUMMARY_LIMIT = 1024 * 1024
@@ -81,13 +82,15 @@ def render_results(blocks, results, blob_url, budget):
 
     header = blocks["results_header"]
     rows = []
-    used = len(header) + 1000
+    used = len(header.encode("utf-8")) + 1000
 
     for result in results:
         row = blocks.render(
             "results_row",
             message=escape_cell(result["message"]),
             path=result["path"],
+            # A path may contain characters that would end the markdown link early.
+            path_url=quote(result["path"]),
             line=result["line"],
             blob_url=blob_url,
         )
@@ -109,7 +112,7 @@ def render_results(blocks, results, blob_url, budget):
     return body
 
 
-def render(blocks, results, *, baseline_commit, blob_url, budget, commit_url, logo_url):
+def render(blocks, results, *, baseline_commit, blob_url, budget, commit_url):
     name = "headline_results" if results else "headline_empty"
     fields = {}
 
@@ -132,7 +135,6 @@ def render(blocks, results, *, baseline_commit, blob_url, budget, commit_url, lo
         "document",
         footer=blocks["footer"],
         headline=blocks.render(name, **fields),
-        logo_url=logo_url,
         results=render_results(blocks, results, blob_url, budget),
     )
 
@@ -167,7 +169,6 @@ def main():
         blob_url=os.environ["BLOB_URL"],
         budget=BUDGETS[target],
         commit_url=os.environ["COMMIT_URL"],
-        logo_url=os.environ["LOGO_URL"],
     )
 
     output.parent.mkdir(parents=True, exist_ok=True)

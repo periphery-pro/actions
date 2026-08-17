@@ -179,7 +179,6 @@ jobs:
           baseline_commit: ${{ steps.baseline.outputs.available == 'true' && steps.baseline.outputs.merge_base || '' }}
           blob_url: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
           commit_url: ${{ github.server_url }}/${{ github.repository }}/commit
-          logo_url: https://raw.githubusercontent.com/periphery-pro/actions/main/assets/logo.svg
           output: ${{ runner.temp }}/periphery-summary.md
           target: summary
 
@@ -191,7 +190,6 @@ jobs:
           baseline_commit: ${{ steps.baseline.outputs.available == 'true' && steps.baseline.outputs.merge_base || '' }}
           blob_url: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
           commit_url: ${{ github.server_url }}/${{ github.repository }}/commit
-          logo_url: https://raw.githubusercontent.com/periphery-pro/actions/main/assets/logo.svg
           output: ${{ runner.temp }}/periphery-comment/comment.md
           target: comment
 

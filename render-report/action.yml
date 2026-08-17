@@ -15,9 +15,6 @@ inputs:
   commit_url:
     description: Base URL for linking to a commit.
     required: true
-  logo_url:
-    description: URL of the logo shown beside the report title.
-    required: true
   output:
     description: Path to write the rendered markdown to.
     required: true
@@ -34,7 +31,6 @@ runs:
         BASELINE_COMMIT: ${{ inputs.baseline_commit }}
         BLOB_URL: ${{ inputs.blob_url }}
         COMMIT_URL: ${{ inputs.commit_url }}
-        LOGO_URL: ${{ inputs.logo_url }}
         OUTPUT: ${{ inputs.output }}
         TARGET: ${{ inputs.target }}
         TEMPLATE: ${{ github.action_path }}/templates/comment.md

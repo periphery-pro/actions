@@ -15,7 +15,6 @@ ANNOTATION = (
 CONTEXT = {
     "blob_url": "https://github.com/o/r/blob/head",
     "commit_url": "https://github.com/o/r/commit",
-    "logo_url": "https://logo.svg",
 }
 
 
@@ -144,13 +143,6 @@ class RenderTest(unittest.TestCase):
         self.assertIn("No new unused code detected compared with ", document)
         self.assertNotIn("| Result | Location |", document)
 
-    def test_shows_the_logo_beside_the_title(self):
-        self.assertIn(
-            '<img src="https://logo.svg" width="24" align="top" alt=""> '
-            "Unused Code Report",
-            self.render([]),
-        )
-
     def test_escapes_a_pipe_so_it_cannot_open_a_column(self):
         results = annotations(1)
         results[0]["message"] = "Unused function '|=(_:_:)'"
@@ -171,6 +163,14 @@ class RenderTest(unittest.TestCase):
         ][0]
 
         self.assertTrue(row.startswith("| `Unused function 'helper1()'` |"))
+
+    def test_percent_encodes_a_path_in_the_link_target(self):
+        results = annotations(1, path="Sources/My Module/A(1).swift")
+        row = [l for l in self.render(results).splitlines() if l.startswith("| `")][0]
+
+        # Displayed verbatim, encoded in the target so the link cannot end early.
+        self.assertIn("[`Sources/My Module/A(1).swift:1`]", row)
+        self.assertIn("/Sources/My%20Module/A%281%29.swift#L1)", row)
 
     def test_leaves_no_blank_line_where_a_section_is_empty(self):
         self.assertNotIn("\n\n\n", self.render([]))
@@ -247,7 +247,6 @@ class MainTest(unittest.TestCase):
             "BASELINE_COMMIT": "a474b02db4bf397a4fc3529f5518775a53deb1c0",
             "BLOB_URL": CONTEXT["blob_url"],
             "COMMIT_URL": CONTEXT["commit_url"],
-            "LOGO_URL": CONTEXT["logo_url"],
             "OUTPUT": str(output_path),
             "TARGET": target,
             "TEMPLATE": str(TEMPLATE),
