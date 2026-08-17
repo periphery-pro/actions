@@ -10,7 +10,7 @@ import re
 import sys
 from pathlib import Path
 from string import Template
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 # GitHub renders nothing at all once a job summary exceeds 1 MiB.
 JOB_SUMMARY_LIMIT = 1024 * 1024
@@ -25,6 +25,10 @@ BUDGETS = {
     "summary": 900_000,
     "comment": 60_000,
 }
+
+# The bug report form lives in a separate repository from the scanned project.
+ISSUE_FORM_URL = "https://github.com/periphery-pro/issues/issues/new"
+ISSUE_FORM_TEMPLATE = "bug_report.yml"
 
 ANNOTATION = re.compile(
     r"^::warning file=(?P<path>.*?),line=(?P<line>\d+),col=(?P<col>\d+),"
@@ -112,7 +116,39 @@ def render_results(blocks, results, blob_url, budget):
     return body
 
 
-def render(blocks, results, *, baseline_commit, blob_url, budget, commit_url):
+def bug_report_url(blocks, *, commit, pull_request, repository, run_url, toolchain):
+    """Build a link that opens the bug report form with the scan context filled in."""
+    query = {
+        "template": ISSUE_FORM_TEMPLATE,
+        "title": blocks.render(
+            "bug_report_title", pull_request=pull_request, repository=repository
+        ),
+        "environment": blocks.render(
+            "bug_report_environment",
+            commit=commit,
+            repository=repository,
+            run_url=run_url,
+            toolchain=toolchain.strip(),
+        ),
+    }
+
+    return f"{ISSUE_FORM_URL}?{urlencode(query)}"
+
+
+def render(
+    blocks,
+    results,
+    *,
+    baseline_commit,
+    blob_url,
+    budget,
+    commit,
+    commit_url,
+    pull_request,
+    repository,
+    run_url,
+    toolchain,
+):
     name = "headline_results" if results else "headline_empty"
     fields = {}
 
@@ -133,7 +169,17 @@ def render(blocks, results, *, baseline_commit, blob_url, budget, commit_url):
 
     document = blocks.render(
         "document",
-        footer=blocks["footer"],
+        footer=blocks.render(
+            "footer",
+            bug_report_url=bug_report_url(
+                blocks,
+                commit=commit,
+                pull_request=pull_request,
+                repository=repository,
+                run_url=run_url,
+                toolchain=toolchain,
+            ),
+        ),
         headline=blocks.render(name, **fields),
         results=render_results(blocks, results, blob_url, budget),
     )
@@ -161,6 +207,12 @@ def main():
 
     blocks = Blocks.parse(template.read_text(encoding="utf-8"))
     results = parse_annotations(annotations)
+    toolchain_file = Path(os.environ.get("TOOLCHAIN_FILE", ""))
+    toolchain = (
+        toolchain_file.read_text(encoding="utf-8", errors="replace")
+        if toolchain_file.name and toolchain_file.exists()
+        else "Versions were not recorded."
+    )
 
     document = render(
         blocks,
@@ -168,7 +220,12 @@ def main():
         baseline_commit=os.environ.get("BASELINE_COMMIT", ""),
         blob_url=os.environ["BLOB_URL"],
         budget=BUDGETS[target],
+        commit=os.environ["COMMIT"],
         commit_url=os.environ["COMMIT_URL"],
+        pull_request=os.environ["PULL_REQUEST"],
+        repository=os.environ["REPOSITORY"],
+        run_url=os.environ["RUN_URL"],
+        toolchain=toolchain,
     )
 
     output.parent.mkdir(parents=True, exist_ok=True)

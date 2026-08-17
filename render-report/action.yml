@@ -12,15 +12,31 @@ inputs:
   blob_url:
     description: Base URL for linking a result to its source, including the head commit.
     required: true
+  commit:
+    description: Commit that was scanned.
+    required: true
   commit_url:
     description: Base URL for linking to a commit.
     required: true
   output:
     description: Path to write the rendered markdown to.
     required: true
+  pull_request:
+    description: Number of the pull request being scanned.
+    required: true
+  repository:
+    description: Repository being scanned, as owner/name.
+    required: true
+  run_url:
+    description: URL of the workflow run that produced the report.
+    required: true
   target:
     description: Destination the report is sized for, either summary or comment.
     required: true
+  toolchain_file:
+    description: File holding the recorded tool versions, included in a bug report.
+    required: false
+    default: ""
 
 runs:
   using: composite
@@ -30,8 +46,13 @@ runs:
         ANNOTATIONS: ${{ inputs.annotations }}
         BASELINE_COMMIT: ${{ inputs.baseline_commit }}
         BLOB_URL: ${{ inputs.blob_url }}
+        COMMIT: ${{ inputs.commit }}
         COMMIT_URL: ${{ inputs.commit_url }}
         OUTPUT: ${{ inputs.output }}
+        PULL_REQUEST: ${{ inputs.pull_request }}
+        REPOSITORY: ${{ inputs.repository }}
+        RUN_URL: ${{ inputs.run_url }}
         TARGET: ${{ inputs.target }}
+        TOOLCHAIN_FILE: ${{ inputs.toolchain_file }}
         TEMPLATE: ${{ github.action_path }}/templates/comment.md
       run: python3 "$GITHUB_ACTION_PATH/render.py"
