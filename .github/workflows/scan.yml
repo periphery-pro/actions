@@ -237,7 +237,7 @@ jobs:
 
               if (shown < count) {
                 print ""
-                printf "_Showing %d of %d results. The scan step's log lists them all._\n", shown, count
+                printf "_Showing %d of %d results. The full list is in the scan log._\n", shown, count
               }
             }
           ' "$output" | tee -a "$GITHUB_STEP_SUMMARY"
