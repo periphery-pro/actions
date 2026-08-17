@@ -28,7 +28,7 @@ No baseline was available, so every result is reported.
 | :- | :- |
 
 [results_row]
-| $message | [`$path:$line`]($blob_url/$path#L$line) |
+| `$message` | [`$path:$line`]($blob_url/$path#L$line) |
 
 [results_truncated]
 _Showing $shown of $total results. The full list is in the scan log._

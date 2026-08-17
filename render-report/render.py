@@ -11,8 +11,19 @@ import sys
 from pathlib import Path
 from string import Template
 
-# GitHub renders nothing at all once a job summary exceeds 1 MiB, so stop short of it.
-BUDGET = 900_000
+# GitHub renders nothing at all once a job summary exceeds 1 MiB.
+JOB_SUMMARY_LIMIT = 1024 * 1024
+
+# GitHub rejects an issue comment body longer than this with HTTP 422. The limit counts
+# characters, so budgeting in bytes stays on the safe side of it.
+COMMENT_LIMIT = 65_536
+
+# The report is rendered once per destination, because a comment is far smaller than a
+# job summary. Each budget leaves room for the surrounding document.
+BUDGETS = {
+    "summary": 900_000,
+    "comment": 60_000,
+}
 
 ANNOTATION = re.compile(
     r"^::warning file=(?P<path>.*?),line=(?P<line>\d+),col=(?P<col>\d+),"
@@ -56,7 +67,15 @@ def parse_annotations(path):
     return results
 
 
-def render_results(blocks, results, blob_url):
+def escape_cell(text):
+    """Keep a declaration name from breaking out of its table cell.
+
+    Swift operators may contain a pipe, which would otherwise start a new column.
+    """
+    return text.replace("|", "\\|")
+
+
+def render_results(blocks, results, blob_url, budget):
     if not results:
         return ""
 
@@ -67,13 +86,13 @@ def render_results(blocks, results, blob_url):
     for result in results:
         row = blocks.render(
             "results_row",
-            message=result["message"],
+            message=escape_cell(result["message"]),
             path=result["path"],
             line=result["line"],
             blob_url=blob_url,
         )
 
-        if used + len(row.encode("utf-8")) + 1 > BUDGET:
+        if used + len(row.encode("utf-8")) + 1 > budget:
             break
 
         rows.append(row)
@@ -90,7 +109,7 @@ def render_results(blocks, results, blob_url):
     return body
 
 
-def render(blocks, results, *, baseline_commit, blob_url, commit_url, logo_url):
+def render(blocks, results, *, baseline_commit, blob_url, budget, commit_url, logo_url):
     qualifier = "new " if baseline_commit else ""
 
     if results:
@@ -118,7 +137,7 @@ def render(blocks, results, *, baseline_commit, blob_url, commit_url, logo_url):
         baseline=baseline,
         headline=headline,
         logo_url=logo_url,
-        results=render_results(blocks, results, blob_url),
+        results=render_results(blocks, results, blob_url, budget),
     )
 
     # Drop the blank line left behind when a section renders empty.
@@ -128,7 +147,15 @@ def render(blocks, results, *, baseline_commit, blob_url, commit_url, logo_url):
 def main():
     annotations = Path(os.environ["ANNOTATIONS"])
     output = Path(os.environ["OUTPUT"])
+    target = os.environ["TARGET"]
     template = Path(os.environ["TEMPLATE"])
+
+    if target not in BUDGETS:
+        print(
+            f"Unknown target {target!r}; expected one of {', '.join(sorted(BUDGETS))}",
+            file=sys.stderr,
+        )
+        return 1
 
     if not annotations.exists():
         print(f"No scan output at {annotations}; nothing to render", file=sys.stderr)
@@ -142,6 +169,7 @@ def main():
         results,
         baseline_commit=os.environ.get("BASELINE_COMMIT", ""),
         blob_url=os.environ["BLOB_URL"],
+        budget=BUDGETS[target],
         commit_url=os.environ["COMMIT_URL"],
         logo_url=os.environ["LOGO_URL"],
     )

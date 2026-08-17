@@ -21,6 +21,9 @@ inputs:
   output:
     description: Path to write the rendered markdown to.
     required: true
+  target:
+    description: Destination the report is sized for, either summary or comment.
+    required: true
 
 runs:
   using: composite
@@ -33,5 +36,6 @@ runs:
         COMMIT_URL: ${{ inputs.commit_url }}
         LOGO_URL: ${{ inputs.logo_url }}
         OUTPUT: ${{ inputs.output }}
+        TARGET: ${{ inputs.target }}
         TEMPLATE: ${{ github.action_path }}/templates/comment.md
       run: python3 "$GITHUB_ACTION_PATH/render.py"

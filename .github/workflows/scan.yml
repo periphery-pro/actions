@@ -171,8 +171,20 @@ jobs:
 
           "$RUNNER_TEMP/periphery/periphery" "${args[@]}" | tee "$RUNNER_TEMP/periphery-output.txt"
 
-      - name: Render report
-        if: always() && github.event_name == 'pull_request' && steps.scan.outcome != 'skipped'
+      - name: Render job summary
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
+        uses: periphery-pro/actions/render-report@feat/job-summary
+        with:
+          annotations: ${{ runner.temp }}/periphery-output.txt
+          baseline_commit: ${{ steps.baseline.outputs.available == 'true' && steps.baseline.outputs.merge_base || '' }}
+          blob_url: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
+          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit
+          logo_url: https://raw.githubusercontent.com/periphery-pro/actions/main/assets/logo.svg
+          output: ${{ runner.temp }}/periphery-summary.md
+          target: summary
+
+      - name: Render pull-request comment
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
         uses: periphery-pro/actions/render-report@feat/job-summary
         with:
           annotations: ${{ runner.temp }}/periphery-output.txt
@@ -181,9 +193,10 @@ jobs:
           commit_url: ${{ github.server_url }}/${{ github.repository }}/commit
           logo_url: https://raw.githubusercontent.com/periphery-pro/actions/main/assets/logo.svg
           output: ${{ runner.temp }}/periphery-comment/comment.md
+          target: comment
 
       - name: Write job summary
-        if: always() && github.event_name == 'pull_request' && steps.scan.outcome != 'skipped'
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
         env:
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
@@ -192,10 +205,10 @@ jobs:
           [[ -f "$payload/comment.md" ]] || exit 0
 
           printf '%s\n' "$PR_NUMBER" > "$payload/pr-number"
-          cat "$payload/comment.md" >> "$GITHUB_STEP_SUMMARY"
+          cat "$RUNNER_TEMP/periphery-summary.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload comment payload
-        if: always() && github.event_name == 'pull_request' && steps.scan.outcome != 'skipped'
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: periphery-comment
