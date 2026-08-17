@@ -197,7 +197,7 @@ class RenderTest(unittest.TestCase):
 
     def test_bug_report_title_names_the_repository_and_pull_request(self):
         self.assertIn(
-            quote_plus("Inaccurate result in periphery-pro/actions-test - PR #10"),
+            quote_plus("periphery-pro/actions-test#10"),
             self.render([]),
         )
 
