@@ -27,6 +27,11 @@ on:
         required: false
         type: boolean
         default: false
+      post_comment:
+        description: Publish the report so a workflow_run workflow can post it as a pull-request comment.
+        required: false
+        type: boolean
+        default: true
 
 permissions: {}
 
@@ -169,7 +174,58 @@ jobs:
             args+=(--write-baseline "$RUNNER_TEMP/periphery-baseline.json")
           fi
 
-          "$RUNNER_TEMP/periphery/periphery" "${args[@]}"
+          "$RUNNER_TEMP/periphery/periphery" "${args[@]}" | tee "$RUNNER_TEMP/periphery-output.txt"
+
+      - name: Render job summary
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
+        uses: periphery-pro/actions/render-report@feat/job-summary
+        with:
+          annotations: ${{ runner.temp }}/periphery-output.txt
+          baseline_commit: ${{ steps.baseline.outputs.available == 'true' && steps.baseline.outputs.merge_base || '' }}
+          blob_url: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
+          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit
+          output: ${{ runner.temp }}/periphery-summary.md
+          target: summary
+
+      - name: Render pull-request comment
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success' && inputs.post_comment
+        uses: periphery-pro/actions/render-report@feat/job-summary
+        with:
+          annotations: ${{ runner.temp }}/periphery-output.txt
+          baseline_commit: ${{ steps.baseline.outputs.available == 'true' && steps.baseline.outputs.merge_base || '' }}
+          blob_url: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
+          commit_url: ${{ github.server_url }}/${{ github.repository }}/commit
+          output: ${{ runner.temp }}/periphery-comment/comment.md
+          target: comment
+
+      - name: Write job summary
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
+        run: |
+          set -euo pipefail
+          summary="$RUNNER_TEMP/periphery-summary.md"
+          [[ -f "$summary" ]] || exit 0
+
+          cat "$summary" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Name the pull request in the comment payload
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success' && inputs.post_comment
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          payload="$RUNNER_TEMP/periphery-comment"
+          [[ -f "$payload/comment.md" ]] || exit 0
+
+          printf '%s\n' "$PR_NUMBER" > "$payload/pr-number"
+
+      - name: Upload comment payload
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success' && inputs.post_comment
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: periphery-comment
+          path: ${{ runner.temp }}/periphery-comment
+          if-no-files-found: ignore
+          overwrite: true
 
       - name: Upload baseline
         if: always() && github.event_name == 'push'
