@@ -198,7 +198,7 @@ jobs:
                 print "No new unused code detected."
                 exit
               }
-              printf "**%d new %s.** Results in files the pull request does not modify are not shown inline in _Files changed_.\n\n", count, (count == 1 ? "result" : "results")
+              printf "**%d new %s.**\n\n", count, (count == 1 ? "result" : "results")
               print "| Result | Location |"
               print "| :- | :- |"
               for (i = 1; i <= count; i++) {
