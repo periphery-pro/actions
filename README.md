@@ -1,11 +1,12 @@
 # Periphery GitHub Actions
 
 The official reusable workflow for scanning **public GitHub repositories** with
-Periphery. On pull requests, it compares the scan with an automatically recorded
-baseline from the merge-base commit and reports only issues introduced by the
-pull request. Results appear as inline GitHub annotations and in the job summary,
-and optionally as a pull-request comment, so a project can adopt Periphery
-without first fixing all of its existing unused code.
+[Periphery](https://periphery.pro). On pull requests, it compares the scan with
+an automatically recorded baseline from the merge-base commit and reports only
+issues introduced by the pull request. Results appear as inline GitHub
+annotations and in the job summary, and optionally as a pull-request comment, so
+a project can adopt Periphery without first fixing all of its existing unused
+code.
 
 ## Configuration
 
