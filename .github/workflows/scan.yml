@@ -214,13 +214,30 @@ jobs:
                 print "No baseline was available, so every result is reported."
               }
 
+              # GitHub renders nothing at all once a job summary exceeds 1 MiB, so stop short of it.
+              budget = 900000
+              used = 1000
+              shown = 0
+
               for (i = 1; i <= count; i++) {
-                if (i == 1) {
+                row = sprintf("| %s | [`%s:%s`](%s/%s#L%s) |", message[i], file[i], line[i], blob, file[i], line[i])
+                if (used + length(row) + 1 > budget) break
+
+                if (shown == 0) {
                   print ""
                   print "| Result | Location |"
                   print "| :- | :- |"
+                  used += 40
                 }
-                printf "| %s | [`%s:%s`](%s/%s#L%s) |\n", message[i], file[i], line[i], blob, file[i], line[i]
+
+                print row
+                used += length(row) + 1
+                shown++
+              }
+
+              if (shown < count) {
+                print ""
+                printf "_Showing %d of %d results. The scan step's log lists them all._\n", shown, count
               }
             }
           ' "$output" | tee -a "$GITHUB_STEP_SUMMARY"
