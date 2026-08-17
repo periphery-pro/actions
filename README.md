@@ -128,5 +128,36 @@ on:
     branches: [main]
 ```
 
+## Pull-request comments
+
+Pull requests from forks receive a read-only `GITHUB_TOKEN`, so the scan job
+cannot post a comment itself. Add a second workflow that runs in the base
+repository once the scan completes:
+
+```yaml
+name: Periphery comment
+
+on:
+  workflow_run:
+    workflows: [Periphery]
+    types: [completed]
+
+permissions: {}
+
+jobs:
+  comment:
+    permissions:
+      actions: read
+      pull-requests: write
+    uses: periphery-pro/actions/.github/workflows/comment.yml@v1
+```
+
+Set `workflows` to the name of the workflow that calls `scan.yml`. GitHub reads
+`workflow_run` triggers only from the default branch, so this file takes effect
+once it is committed there.
+
+The comment repeats the job summary, and later pushes to the pull request update
+it in place rather than adding another comment.
+
 Stable releases also provide moving major (`@v1`) and major-minor (`@v1.2`)
 workflow tags.
