@@ -169,7 +169,43 @@ jobs:
             args+=(--write-baseline "$RUNNER_TEMP/periphery-baseline.json")
           fi
 
-          "$RUNNER_TEMP/periphery/periphery" "${args[@]}"
+          "$RUNNER_TEMP/periphery/periphery" "${args[@]}" | tee "$RUNNER_TEMP/periphery-output.txt"
+
+      - name: Write job summary
+        if: always() && github.event_name == 'pull_request' && steps.scan.outcome != 'skipped'
+        env:
+          BLOB_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/periphery-output.txt"
+          [[ -f "$output" ]] || exit 0
+
+          awk -v blob="$BLOB_URL" '
+            /^::warning file=/ {
+              rest = substr($0, 11)
+              sep = index(rest, "::")
+              attrs = substr(rest, 1, sep - 1)
+              split(attrs, field, ",")
+              count++
+              message[count] = substr(rest, sep + 2)
+              file[count] = substr(field[1], 6)
+              line[count] = substr(field[2], 6)
+            }
+            END {
+              print "## Periphery"
+              print ""
+              if (count == 0) {
+                print "No new unused code detected."
+                exit
+              }
+              printf "**%d new %s.** Results in files the pull request does not modify are not shown inline in _Files changed_.\n\n", count, (count == 1 ? "result" : "results")
+              print "| Result | Location |"
+              print "| :- | :- |"
+              for (i = 1; i <= count; i++) {
+                printf "| %s | [`%s:%s`](%s/%s#L%s) |\n", message[i], file[i], line[i], blob, file[i], line[i]
+              }
+            }
+          ' "$output" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload baseline
         if: always() && github.event_name == 'push'
