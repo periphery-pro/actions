@@ -1,0 +1,37 @@
+name: Render Periphery report
+description: Render the results of a Periphery scan as a markdown report.
+
+inputs:
+  annotations:
+    description: Path to the scan output containing GitHub Actions annotations.
+    required: true
+  baseline_commit:
+    description: Merge-base commit the scan was compared against. Empty when no baseline was used.
+    required: false
+    default: ""
+  blob_url:
+    description: Base URL for linking a result to its source, including the head commit.
+    required: true
+  commit_url:
+    description: Base URL for linking to a commit.
+    required: true
+  logo_url:
+    description: URL of the logo shown beside the report title.
+    required: true
+  output:
+    description: Path to write the rendered markdown to.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        ANNOTATIONS: ${{ inputs.annotations }}
+        BASELINE_COMMIT: ${{ inputs.baseline_commit }}
+        BLOB_URL: ${{ inputs.blob_url }}
+        COMMIT_URL: ${{ inputs.commit_url }}
+        LOGO_URL: ${{ inputs.logo_url }}
+        OUTPUT: ${{ inputs.output }}
+        TEMPLATE: ${{ github.action_path }}/templates/comment.md
+      run: python3 "$GITHUB_ACTION_PATH/render.py"
