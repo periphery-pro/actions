@@ -177,7 +177,6 @@ jobs:
           BASELINE_AVAILABLE: ${{ steps.baseline.outputs.available }}
           BLOB_URL: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
           COMMIT_URL: ${{ github.server_url }}/${{ github.repository }}/commit
-          JOB_WORKFLOW_SHA: ${{ github.job_workflow_sha }}
           MERGE_BASE: ${{ steps.baseline.outputs.merge_base }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
@@ -189,8 +188,9 @@ jobs:
           mkdir -p "$payload"
           printf '%s\n' "$PR_NUMBER" > "$payload/pr-number"
 
-          # Pin the logo to the commit of this workflow so it always matches the version in use.
-          logo="https://raw.githubusercontent.com/periphery-pro/actions/${JOB_WORKFLOW_SHA:-main}/assets/logo.svg"
+          # github.job_workflow_sha is empty inside a reusable workflow, so the logo cannot be
+          # pinned to this workflow's commit. It is a brand asset, so track the default branch.
+          logo="https://raw.githubusercontent.com/periphery-pro/actions/main/assets/logo.svg"
 
           awk -v available="$BASELINE_AVAILABLE" -v blob="$BLOB_URL" -v commit="$COMMIT_URL" -v logo="$logo" -v mergeBase="$MERGE_BASE" '
             /^::warning file=/ {
