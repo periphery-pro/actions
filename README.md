@@ -3,130 +3,49 @@
 The official reusable workflow for scanning **public GitHub repositories** with
 Periphery. On pull requests, it compares the scan with an automatically recorded
 baseline from the merge-base commit and reports only issues introduced by the
-pull request. Results appear as inline GitHub annotations, so a project can
-adopt Periphery without first fixing all of its existing unused code.
+pull request. Results appear as inline GitHub annotations and in the job summary,
+and optionally as a pull-request comment, so a project can adopt Periphery
+without first fixing all of its existing unused code.
 
 ## Configuration
 
 The workflow checks out the caller repository and runs the scan from its root.
-Put your Periphery configuration in `.periphery.yml` at
-that root; the CLI discovers it automatically, so scan configuration stays
-versioned with the repository being scanned. Workflow behavior can be adjusted
-with the inputs below.
-
-```yaml
-jobs:
-  periphery:
-    permissions:
-      actions: read
-      contents: read
-      id-token: write
-    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
-```
-
-### Inputs
-
-| Input | Type | Default | Description |
-| --- | --- | --- | --- |
-| `fetch_depth` | number | `0` | Git history depth fetched from the pull-request head and base. `0` fetches the complete history; a positive value must be deep enough to include the merge base. |
-| `checkout_submodules` | boolean | `false` | Recursively check out Git submodules before scanning. |
-| `setup` | string | empty | Bash script to run after checkout and before scanning. |
-| `periphery_version` | string | latest | Exact Periphery CLI release tag to use. |
-| `run_without_baseline` | boolean | `false` | Run a full pull-request scan when its merge-base baseline is unavailable. When `false`, the scan is skipped instead. |
-
-By default, the workflow downloads the latest stable CLI release from
-[cli-releases](https://github.com/periphery-pro/cli-releases).
-
-If the merge-base baseline is unavailable, the pull-request scan is skipped by
-default. Set `run_without_baseline` to `true` to run a full scan instead:
-
-```yaml
-jobs:
-  periphery:
-    permissions:
-      actions: read
-      contents: read
-      id-token: write
-    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
-    with:
-      run_without_baseline: true
-```
-
-The workflow fetches the complete Git history by default so it can reliably
-identify a pull request's merge base. Set `fetch_depth` to a positive number
-to limit the checkout history for large repositories. The configured depth
-must include the merge-base commit or baseline lookup will fail:
-
-```yaml
-jobs:
-  periphery:
-    permissions:
-      actions: read
-      contents: read
-      id-token: write
-    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
-    with:
-      fetch_depth: 100
-```
-
-If the project relies on Git submodules, enable their recursive checkout:
-
-If the project relies on Git submodules, enable their recursive checkout:
-
-```yaml
-jobs:
-  periphery:
-    permissions:
-      actions: read
-      contents: read
-      id-token: write
-    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
-    with:
-      checkout_submodules: true
-```
-
-For projects that need build prerequisites, run a Bash setup script from the
-checked-out repository before the scan. It can invoke multiple project scripts:
-
-```yaml
-jobs:
-  periphery:
-    permissions:
-      actions: read
-      contents: read
-      id-token: write
-    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
-    with:
-      setup: |
-        ./scripts/prepare-periphery-scan.sh
-```
-
-To use a particular CLI release instead of the latest available release:
-
-```yaml
-jobs:
-  periphery:
-    permissions:
-      actions: read
-      contents: read
-      id-token: write
-    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
-    with:
-      periphery_version: 1.0.0
-```
-
-The caller is responsible for selecting which pushes record baselines. Each
-baseline artifact is keyed by commit SHA and follows the caller repository's
-GitHub Actions retention setting, which defaults to 90 days for public
-repositories. A typical workflow runs for pull requests and for pushes to
-`main`:
+Put your Periphery configuration in `.periphery.yml` at that root; the CLI
+discovers it automatically, so scan configuration stays versioned with the
+repository being scanned.
 
 ```yaml
 on:
   pull_request:
   push:
     branches: [main]
+
+jobs:
+  periphery:
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    uses: periphery-pro/actions/.github/workflows/scan.yml@v1
 ```
+
+Pull-request runs compare against a baseline; push runs record one. The caller
+decides which pushes record baselines, so include the branches you merge into.
+Each baseline artifact is keyed by commit SHA and follows the caller
+repository's GitHub Actions retention setting, which defaults to 90 days for
+public repositories.
+
+### Inputs
+
+All inputs are optional and are passed under `with:`.
+
+| Input | Type | Default | Description |
+| --- | --- | --- | --- |
+| `fetch_depth` | number | `0` | Git history depth fetched from the pull-request head and base. `0` fetches the complete history, which reliably identifies a pull request's merge base. Set a positive value to limit the checkout for large repositories — it must be deep enough to reach the merge-base commit, or the baseline lookup fails and the scan is skipped. |
+| `checkout_submodules` | boolean | `false` | Recursively check out the caller repository's Git submodules before scanning. Enable this when the build needs them. |
+| `setup` | string | empty | Bash script run in the checked-out repository after checkout and before scanning, for projects with build prerequisites. It runs from the repository root and may invoke several project scripts, for example `./scripts/prepare-periphery-scan.sh`. A non-zero exit fails the job before the scan starts. |
+| `periphery_version` | string | latest | Exact Periphery CLI release tag to use, for example `1.0.0`. See [available releases](https://github.com/periphery-pro/cli-releases/releases). By default the workflow resolves the latest stable release. Pin this to keep results stable across CLI updates. |
+| `run_without_baseline` | boolean | `false` | What to do when a pull request's merge-base baseline is unavailable, which happens before the first baseline is recorded or after the artifact expires. By default the scan is skipped and a notice explains why. Set `true` to scan anyway — every existing result is then reported, not only what the pull request introduced. |
 
 ## Pull-request comments
 
@@ -159,5 +78,4 @@ once it is committed there.
 The comment repeats the job summary, and later pushes to the pull request update
 it in place rather than adding another comment.
 
-Stable releases also provide moving major (`@v1`) and major-minor (`@v1.2`)
-workflow tags.
+Stable releases also provide a moving major (`@v1`) workflow tag.
