@@ -72,12 +72,30 @@ def parse_annotations(path):
     return results
 
 
-def escape_cell(text):
-    """Keep a declaration name from breaking out of its table cell.
+# Only the declaration name is shown as code, so the surrounding prose and the
+# location stay plain and wrap. Swift names contain characters GitHub reads as
+# markup, and 'foo(_:_:)' would emphasise if it were not in a code span.
+SYMBOL = re.compile(r"'([^']*)'")
+MARKDOWN_SPECIAL = "\\`*_[]"
 
-    Swift operators may contain a pipe, which would otherwise start a new column.
-    """
+# How many results appear before the rest are folded away.
+VISIBLE_RESULTS = 10
+
+
+def escape_text(text):
+    """Escape markdown so plain text renders literally."""
+    for character in MARKDOWN_SPECIAL:
+        text = text.replace(character, f"\\{character}")
+
     return text.replace("|", "\\|")
+
+
+def format_message(message):
+    """Show the declaration name as code, leaving the rest of the message plain."""
+    shown = SYMBOL.sub(lambda match: f"`{match.group(1)}`", message)
+
+    # A pipe would otherwise start a new column, even inside a code span.
+    return shown.replace("|", "\\|")
 
 
 def render_results(blocks, results, blob_url, budget):
@@ -87,16 +105,17 @@ def render_results(blocks, results, blob_url, budget):
     header = blocks["results_header"]
     rows = []
 
-    # Reserve the note that appears if the table is cut short, so adding it can never
-    # push the document past the budget.
+    # Reserve the parts appended after the rows, so adding them can never push the
+    # document past the budget.
     note = blocks.render("results_truncated", shown=len(results), total=len(results))
-    used = len(header.encode("utf-8")) + len(note.encode("utf-8")) + 4
+    fold = blocks.render("results_remainder", count=len(results), rows="", truncated="")
+    used = len((header + note + fold).encode("utf-8")) + 8
 
     for result in results:
         row = blocks.render(
             "results_row",
-            message=escape_cell(result["message"]),
-            path=result["path"],
+            message=format_message(result["message"]),
+            path=escape_text(result["path"]),
             # A path may contain characters that would end the markdown link early.
             path_url=quote(result["path"]),
             line=result["line"],
@@ -109,13 +128,21 @@ def render_results(blocks, results, blob_url, budget):
         rows.append(row)
         used += len(row.encode("utf-8")) + 1
 
-    body = "\n".join([header, *rows])
+    truncated = (
+        blocks.render("results_truncated", shown=len(rows), total=len(results))
+        if len(rows) < len(results)
+        else ""
+    )
+    hidden = rows[VISIBLE_RESULTS:]
+    body = "\n".join([header, *rows[:VISIBLE_RESULTS]])
 
-    if len(rows) < len(results):
-        truncated = blocks.render(
-            "results_truncated", shown=len(rows), total=len(results)
+    if hidden or truncated:
+        body += "\n\n" + blocks.render(
+            "results_remainder",
+            count=len(hidden),
+            rows="\n".join(hidden),
+            truncated=truncated,
         )
-        body += f"\n\n{truncated}"
 
     return body
 

@@ -28,7 +28,17 @@ No unused code detected.
 | :- | :- |
 
 [results_row]
-| `$message` | [`$path:$line`]($blob_url/$path_url#L$line) |
+| $message | [$path:$line]($blob_url/$path_url#L$line) |
+
+[results_remainder]
+<details>
+<summary>Show remaining $count results</summary>
+
+| Result | Location |
+| :- | :- |
+$rows
+$truncated
+</details>
 
 [results_truncated]
 _Showing $shown of $total results. The full list is in the scan log._

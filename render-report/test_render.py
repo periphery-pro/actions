@@ -62,6 +62,7 @@ class BlocksTest(unittest.TestCase):
                 "headline_results",
                 "headline_results_without_baseline",
                 "results_header",
+                "results_remainder",
                 "results_row",
                 "results_truncated",
             ],
@@ -140,11 +141,22 @@ class RenderTest(unittest.TestCase):
 
     def test_links_each_result_to_its_source(self):
         self.assertIn(
-            "| `Unused function 'helper1()'` | "
-            "[`Sources/Greeting.swift:1`]"
+            "| Unused function `helper1()` | "
+            "[Sources/Greeting.swift:1]"
             "(https://github.com/o/r/blob/head/Sources/Greeting.swift#L1) |",
             self.render(annotations(1)),
         )
+
+    def test_shows_ten_results_before_folding_the_rest(self):
+        document = self.render(annotations(25))
+        before, _, after = document.partition("<details>")
+
+        self.assertEqual(before.count("| Unused function"), 10)
+        self.assertEqual(after.count("| Unused function"), 15)
+        self.assertIn("<summary>Show remaining 15 results</summary>", document)
+
+    def test_does_not_fold_ten_or_fewer_results(self):
+        self.assertNotIn("<details>", self.render(annotations(10)))
 
     def test_reports_no_results_without_a_table(self):
         document = self.render([])
@@ -158,27 +170,39 @@ class RenderTest(unittest.TestCase):
         row = [
             line
             for line in self.render(results).splitlines()
-            if line.startswith("| `")
+            if line.startswith("| Unused")
         ][0]
 
         self.assertIn("\\|=", row)
         self.assertEqual(row.count("|") - row.count("\\|"), 3)
 
-    def test_renders_the_message_as_code(self):
+    def test_renders_only_the_declaration_name_as_code(self):
         row = [
             line
             for line in self.render(annotations(1)).splitlines()
-            if line.startswith("| `")
+            if line.startswith("| Unused")
         ][0]
 
-        self.assertTrue(row.startswith("| `Unused function 'helper1()'` |"))
+        # The prose stays plain so a long cell wraps; only the name is code.
+        self.assertTrue(row.startswith("| Unused function `helper1()` |"))
+
+    def test_does_not_wrap_the_location_in_code(self):
+        row = [
+            line
+            for line in self.render(annotations(1)).splitlines()
+            if line.startswith("| Unused")
+        ][0]
+
+        self.assertIn("[Sources/Greeting.swift:1](", row)
 
     def test_percent_encodes_a_path_in_the_link_target(self):
         results = annotations(1, path="Sources/My Module/A(1).swift")
-        row = [l for l in self.render(results).splitlines() if l.startswith("| `")][0]
+        row = [
+            l for l in self.render(results).splitlines() if l.startswith("| Unused")
+        ][0]
 
         # Displayed verbatim, encoded in the target so the link cannot end early.
-        self.assertIn("[`Sources/My Module/A(1).swift:1`]", row)
+        self.assertIn("[Sources/My Module/A(1).swift:1]", row)
         self.assertIn("/Sources/My%20Module/A%281%29.swift#L1)", row)
 
     def test_leaves_no_blank_line_where_a_section_is_empty(self):
@@ -282,7 +306,7 @@ class TruncationTest(unittest.TestCase):
         document = self.render_within(render.BUDGETS["summary"], annotations(3))
 
         self.assertNotIn("Showing", document)
-        self.assertEqual(document.count("| `Unused function"), 3)
+        self.assertEqual(document.count("| Unused function"), 3)
 
     def test_stops_and_explains_once_the_budget_is_reached(self):
         document = self.render_within(1200, annotations(50))
@@ -290,9 +314,16 @@ class TruncationTest(unittest.TestCase):
         self.assertIn("of 50 results. The full list is in the scan log.", document)
         self.assertLess(len(document.encode("utf-8")), 2000)
 
+    def test_folds_the_truncation_note_away_with_the_rest(self):
+        document = self.render_within(4_000, annotations(500))
+        _, _, after = document.partition("<details>")
+
+        self.assertIn("results. The full list is in the scan log._", after)
+        self.assertNotIn("scan log", document.partition("<details>")[0])
+
     def test_counts_only_the_rows_it_kept(self):
         document = self.render_within(1200, annotations(50))
-        shown = document.count("| `Unused function")
+        shown = document.count("| Unused function")
 
         self.assertIn(f"_Showing {shown} of 50 results.", document)
 
@@ -328,7 +359,7 @@ class MainTest(unittest.TestCase):
             status, output = self.run_main(directory)
 
             self.assertEqual(status, 0)
-            self.assertIn("Unused struct 'Greeting'", output.read_text())
+            self.assertIn("Unused struct `Greeting`", output.read_text())
 
     def test_rejects_an_unknown_target(self):
         with tempfile.TemporaryDirectory() as directory:
