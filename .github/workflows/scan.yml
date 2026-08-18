@@ -176,6 +176,19 @@ jobs:
 
           "$RUNNER_TEMP/periphery/periphery" "${args[@]}" | tee "$RUNNER_TEMP/periphery-output.txt"
 
+      - name: Record tool versions
+        if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          {
+            "$RUNNER_TEMP/periphery/periphery" version || echo "periphery version unavailable"
+            swift -version || echo "swift version unavailable"
+            xcodebuild -version || echo "xcodebuild version unavailable"
+          } > "$RUNNER_TEMP/periphery-toolchain.txt" 2>&1
+
+          cat "$RUNNER_TEMP/periphery-toolchain.txt"
+
       - name: Render job summary
         if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
         uses: periphery-pro/actions/render-report@v1
@@ -183,9 +196,15 @@ jobs:
           annotations: ${{ runner.temp }}/periphery-output.txt
           baseline_commit: ${{ steps.baseline.outputs.available == 'true' && steps.baseline.outputs.merge_base || '' }}
           blob_url: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
+          commit: ${{ github.event.pull_request.head.sha }}
           commit_url: ${{ github.server_url }}/${{ github.repository }}/commit
           output: ${{ runner.temp }}/periphery-summary.md
+          pull_request: ${{ github.event.pull_request.number }}
+          pull_request_url: ${{ github.event.pull_request.html_url }}
+          repository: ${{ github.repository }}
+          run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           target: summary
+          toolchain_file: ${{ runner.temp }}/periphery-toolchain.txt
 
       - name: Render pull-request comment
         if: github.event_name == 'pull_request' && steps.scan.outcome == 'success' && inputs.post_comment
@@ -194,9 +213,15 @@ jobs:
           annotations: ${{ runner.temp }}/periphery-output.txt
           baseline_commit: ${{ steps.baseline.outputs.available == 'true' && steps.baseline.outputs.merge_base || '' }}
           blob_url: ${{ github.server_url }}/${{ github.repository }}/blob/${{ github.event.pull_request.head.sha }}
+          commit: ${{ github.event.pull_request.head.sha }}
           commit_url: ${{ github.server_url }}/${{ github.repository }}/commit
           output: ${{ runner.temp }}/periphery-comment/comment.md
+          pull_request: ${{ github.event.pull_request.number }}
+          pull_request_url: ${{ github.event.pull_request.html_url }}
+          repository: ${{ github.repository }}
+          run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           target: comment
+          toolchain_file: ${{ runner.temp }}/periphery-toolchain.txt
 
       - name: Write job summary
         if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'

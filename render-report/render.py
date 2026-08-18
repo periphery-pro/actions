@@ -10,7 +10,7 @@ import re
 import sys
 from pathlib import Path
 from string import Template
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 
 # GitHub renders nothing at all once a job summary exceeds 1 MiB.
 JOB_SUMMARY_LIMIT = 1024 * 1024
@@ -25,6 +25,10 @@ BUDGETS = {
     "summary": 900_000,
     "comment": 60_000,
 }
+
+# The bug report form lives in a separate repository from the scanned project.
+ISSUE_FORM_URL = "https://github.com/periphery-pro/issues/issues/new"
+ISSUE_FORM_TEMPLATE = "bug_report.yml"
 
 ANNOTATION = re.compile(
     r"^::warning file=(?P<path>.*?),line=(?P<line>\d+),col=(?P<col>\d+),"
@@ -68,12 +72,30 @@ def parse_annotations(path):
     return results
 
 
-def escape_cell(text):
-    """Keep a declaration name from breaking out of its table cell.
+# Only the declaration name is shown as code, so the surrounding prose and the
+# location stay plain and wrap. Swift names contain characters GitHub reads as
+# markup, and 'foo(_:_:)' would emphasise if it were not in a code span.
+SYMBOL = re.compile(r"'([^']*)'")
+MARKDOWN_SPECIAL = "\\`*_[]"
 
-    Swift operators may contain a pipe, which would otherwise start a new column.
-    """
+# How many results appear before the rest are folded away.
+VISIBLE_RESULTS = 10
+
+
+def escape_text(text):
+    """Escape markdown so plain text renders literally."""
+    for character in MARKDOWN_SPECIAL:
+        text = text.replace(character, f"\\{character}")
+
     return text.replace("|", "\\|")
+
+
+def format_message(message):
+    """Show the declaration name as code, leaving the rest of the message plain."""
+    shown = SYMBOL.sub(lambda match: f"`{match.group(1)}`", message)
+
+    # A pipe would otherwise start a new column, even inside a code span.
+    return shown.replace("|", "\\|")
 
 
 def render_results(blocks, results, blob_url, budget):
@@ -82,13 +104,18 @@ def render_results(blocks, results, blob_url, budget):
 
     header = blocks["results_header"]
     rows = []
-    used = len(header.encode("utf-8")) + 1000
+
+    # Reserve the parts appended after the rows, so adding them can never push the
+    # document past the budget.
+    note = blocks.render("results_truncated", shown=len(results), total=len(results))
+    fold = blocks.render("results_remainder", count=len(results), rows="", truncated="")
+    used = len((header + note + fold).encode("utf-8")) + 8
 
     for result in results:
         row = blocks.render(
             "results_row",
-            message=escape_cell(result["message"]),
-            path=result["path"],
+            message=format_message(result["message"]),
+            path=escape_text(result["path"]),
             # A path may contain characters that would end the markdown link early.
             path_url=quote(result["path"]),
             line=result["line"],
@@ -101,18 +128,73 @@ def render_results(blocks, results, blob_url, budget):
         rows.append(row)
         used += len(row.encode("utf-8")) + 1
 
-    body = "\n".join([header, *rows])
+    truncated = (
+        blocks.render("results_truncated", shown=len(rows), total=len(results))
+        if len(rows) < len(results)
+        else ""
+    )
+    hidden = rows[VISIBLE_RESULTS:]
+    body = "\n".join([header, *rows[:VISIBLE_RESULTS]])
 
-    if len(rows) < len(results):
-        truncated = blocks.render(
-            "results_truncated", shown=len(rows), total=len(results)
+    if hidden or truncated:
+        body += "\n\n" + blocks.render(
+            "results_remainder",
+            count=len(hidden),
+            rows="\n".join(hidden),
+            truncated=truncated,
         )
-        body += f"\n\n{truncated}"
 
     return body
 
 
-def render(blocks, results, *, baseline_commit, blob_url, budget, commit_url):
+def bug_report_url(
+    blocks,
+    *,
+    commit,
+    commit_url,
+    pull_request,
+    pull_request_url,
+    repository,
+    run_url,
+    toolchain,
+):
+    """Build a link that opens the bug report form with the scan context filled in."""
+    query = {
+        "template": ISSUE_FORM_TEMPLATE,
+        "title": blocks.render(
+            "bug_report_title", pull_request=pull_request, repository=repository
+        ),
+        "environment": blocks.render(
+            "bug_report_environment",
+            commit=commit,
+            commit_url=commit_url,
+            pull_request=pull_request,
+            pull_request_url=pull_request_url,
+            repository=repository,
+            run_url=run_url,
+            short_commit=commit[:7],
+            toolchain=toolchain.strip(),
+        ),
+    }
+
+    return f"{ISSUE_FORM_URL}?{urlencode(query)}"
+
+
+def render(
+    blocks,
+    results,
+    *,
+    baseline_commit,
+    blob_url,
+    budget,
+    commit,
+    commit_url,
+    pull_request,
+    pull_request_url,
+    repository,
+    run_url,
+    toolchain,
+):
     name = "headline_results" if results else "headline_empty"
     fields = {}
 
@@ -131,15 +213,33 @@ def render(blocks, results, *, baseline_commit, blob_url, budget, commit_url):
             noun="result" if len(results) == 1 else "results",
         )
 
-    document = blocks.render(
-        "document",
-        footer=blocks["footer"],
-        headline=blocks.render(name, **fields),
-        results=render_results(blocks, results, blob_url, budget),
+    footer = blocks.render(
+        "footer",
+        bug_report_url=bug_report_url(
+            blocks,
+            commit=commit,
+            commit_url=commit_url,
+            pull_request=pull_request,
+            pull_request_url=pull_request_url,
+            repository=repository,
+            run_url=run_url,
+            toolchain=toolchain,
+        ),
     )
+    headline = blocks.render(name, **fields)
 
-    # Drop the blank line left behind when a section renders empty.
-    return re.sub(r"\n{3,}", "\n\n", document).strip() + "\n"
+    def document(table):
+        rendered = blocks.render(
+            "document", footer=footer, headline=headline, results=table
+        )
+        # Drop the blank line left behind when a section renders empty.
+        return re.sub(r"\n{3,}", "\n\n", rendered).strip() + "\n"
+
+    # Everything outside the table is measured rather than estimated, because the
+    # footer carries a bug report URL whose length depends on the recorded versions.
+    overhead = len(document("").encode("utf-8"))
+
+    return document(render_results(blocks, results, blob_url, budget - overhead))
 
 
 def main():
@@ -161,6 +261,12 @@ def main():
 
     blocks = Blocks.parse(template.read_text(encoding="utf-8"))
     results = parse_annotations(annotations)
+    toolchain_file = Path(os.environ.get("TOOLCHAIN_FILE", ""))
+    toolchain = (
+        toolchain_file.read_text(encoding="utf-8", errors="replace")
+        if toolchain_file.name and toolchain_file.exists()
+        else "Versions were not recorded."
+    )
 
     document = render(
         blocks,
@@ -168,7 +274,13 @@ def main():
         baseline_commit=os.environ.get("BASELINE_COMMIT", ""),
         blob_url=os.environ["BLOB_URL"],
         budget=BUDGETS[target],
+        commit=os.environ["COMMIT"],
         commit_url=os.environ["COMMIT_URL"],
+        pull_request=os.environ["PULL_REQUEST"],
+        pull_request_url=os.environ["PULL_REQUEST_URL"],
+        repository=os.environ["REPOSITORY"],
+        run_url=os.environ["RUN_URL"],
+        toolchain=toolchain,
     )
 
     output.parent.mkdir(parents=True, exist_ok=True)
