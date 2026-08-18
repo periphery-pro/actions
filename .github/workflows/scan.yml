@@ -191,7 +191,7 @@ jobs:
 
       - name: Render job summary
         if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
-        uses: periphery-pro/actions/render-report@feat/report-a-bug
+        uses: periphery-pro/actions/render-report@v1
         with:
           annotations: ${{ runner.temp }}/periphery-output.txt
           baseline_commit: ${{ steps.baseline.outputs.available == 'true' && steps.baseline.outputs.merge_base || '' }}
@@ -208,7 +208,7 @@ jobs:
 
       - name: Render pull-request comment
         if: github.event_name == 'pull_request' && steps.scan.outcome == 'success' && inputs.post_comment
-        uses: periphery-pro/actions/render-report@feat/report-a-bug
+        uses: periphery-pro/actions/render-report@v1
         with:
           annotations: ${{ runner.temp }}/periphery-output.txt
           baseline_commit: ${{ steps.baseline.outputs.available == 'true' && steps.baseline.outputs.merge_base || '' }}
