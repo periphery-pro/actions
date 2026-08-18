@@ -122,6 +122,15 @@ class RenderTest(unittest.TestCase):
     def test_counts_a_single_result_in_the_singular(self):
         self.assertIn("**1 new result** compared with ", self.render(annotations(1)))
 
+    def test_does_not_end_the_headline_with_a_period(self):
+        headline = [
+            line
+            for line in self.render(annotations(1)).splitlines()
+            if line.startswith("**1 new result**")
+        ][0]
+
+        self.assertFalse(headline.endswith("."))
+
     def test_counts_several_results_in_the_plural(self):
         self.assertIn("**3 new results** compared with ", self.render(annotations(3)))
 
@@ -135,7 +144,7 @@ class RenderTest(unittest.TestCase):
 
         self.assertIn(
             "compared with [`a474b02`](https://github.com/o/r/commit/"
-            "a474b02db4bf397a4fc3529f5518775a53deb1c0).",
+            "a474b02db4bf397a4fc3529f5518775a53deb1c0)",
             document,
         )
 

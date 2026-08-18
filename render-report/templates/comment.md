@@ -12,7 +12,7 @@ $results
 $footer
 
 [headline_results]
-**$count new $noun** compared with [`$short_sha`]($commit_url/$sha).
+**$count new $noun** compared with [`$short_sha`]($commit_url/$sha)
 
 [headline_results_without_baseline]
 **$count $noun**. No baseline was available, so every result is reported.
