@@ -261,6 +261,11 @@ def main():
 
     blocks = Blocks.parse(template.read_text(encoding="utf-8"))
     results = parse_annotations(annotations)
+
+    if not results and os.environ.get("SKIP_EMPTY") == "true":
+        print(f"Scan found no results; not writing {output}")
+        return 0
+
     toolchain_file = Path(os.environ.get("TOOLCHAIN_FILE", ""))
     toolchain = (
         toolchain_file.read_text(encoding="utf-8", errors="replace")

@@ -329,7 +329,9 @@ class TruncationTest(unittest.TestCase):
 
 
 class MainTest(unittest.TestCase):
-    def run_main(self, directory, *, target="comment", write_annotations=True):
+    def run_main(
+        self, directory, *, target="comment", write_annotations=True, skip_empty=False
+    ):
         annotations_path = Path(directory) / "output.txt"
         output_path = Path(directory) / "comment" / "comment.md"
 
@@ -350,6 +352,9 @@ class MainTest(unittest.TestCase):
             "TARGET": target,
             "TEMPLATE": str(TEMPLATE),
         }
+
+        if skip_empty:
+            environment["SKIP_EMPTY"] = "true"
 
         with mock.patch.dict("os.environ", environment, clear=False):
             return render.main(), output_path
@@ -374,6 +379,33 @@ class MainTest(unittest.TestCase):
 
             self.assertEqual(status, 0)
             self.assertFalse(output.exists())
+
+    def test_skip_empty_writes_nothing_when_there_are_no_results(self):
+        with tempfile.TemporaryDirectory() as directory:
+            # An empty scan output parses to no results; only a missing file
+            # takes the earlier "nothing to render" path.
+            (Path(directory) / "output.txt").write_text("", encoding="utf-8")
+            status, output = self.run_main(
+                directory, write_annotations=False, skip_empty=True
+            )
+
+            self.assertEqual(status, 0)
+            self.assertFalse(output.exists())
+
+    def test_skip_empty_still_writes_a_report_with_results(self):
+        with tempfile.TemporaryDirectory() as directory:
+            status, output = self.run_main(directory, skip_empty=True)
+
+            self.assertEqual(status, 0)
+            self.assertIn("Unused struct `Greeting`", output.read_text())
+
+    def test_reports_no_results_by_default(self):
+        with tempfile.TemporaryDirectory() as directory:
+            (Path(directory) / "output.txt").write_text("", encoding="utf-8")
+            status, output = self.run_main(directory, write_annotations=False)
+
+            self.assertEqual(status, 0)
+            self.assertIn("No new unused code detected", output.read_text())
 
 
 if __name__ == "__main__":
