@@ -69,6 +69,9 @@ permissions: {}
 
 jobs:
   comment:
+    # Push runs record baselines and have nothing to comment on; this also skips
+    # their runs visibly instead of no-oping inside the reusable workflow.
+    if: github.event.workflow_run.event == 'pull_request'
     permissions:
       actions: read
       pull-requests: write
