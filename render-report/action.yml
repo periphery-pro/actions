@@ -30,6 +30,10 @@ inputs:
   repository:
     description: Repository being scanned, as owner/name.
     required: true
+  skip_empty:
+    description: Write nothing when the scan found no results, so no report is published.
+    required: false
+    default: "false"
   run_url:
     description: URL of the workflow run that produced the report.
     required: true
@@ -56,6 +60,7 @@ runs:
         PULL_REQUEST_URL: ${{ inputs.pull_request_url }}
         REPOSITORY: ${{ inputs.repository }}
         RUN_URL: ${{ inputs.run_url }}
+        SKIP_EMPTY: ${{ inputs.skip_empty }}
         TARGET: ${{ inputs.target }}
         TOOLCHAIN_FILE: ${{ inputs.toolchain_file }}
         TEMPLATE: ${{ github.action_path }}/templates/comment.md

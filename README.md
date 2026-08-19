@@ -50,6 +50,7 @@ All inputs are optional and are passed under `with:`.
 | `periphery_version` | string | latest | Exact Periphery CLI release tag to use, for example `1.0.0`. See [available releases](https://github.com/periphery-pro/cli-releases/releases). By default the workflow resolves the latest stable release. Pin this to keep results stable across CLI updates. |
 | `run_without_baseline` | boolean | `false` | What to do when a pull request's merge-base baseline is unavailable, which happens before the first baseline is recorded or after the artifact expires. By default the scan is skipped and a notice explains why. Set `true` to scan anyway — every existing result is then reported, not only what the pull request introduced. |
 | `post_comment` | boolean | `true` | Publish the rendered report so it can be posted as a pull-request comment. This only prepares the report; a comment appears when the caller also adds the workflow described below. Set `false` to keep the job summary but never comment. |
+| `comment_on_empty` | boolean | `true` | Post the pull-request comment even when the scan found no results. Set `false` to comment only when the pull request introduces unused code. The job summary always reports the scan either way. |
 
 ## Pull-request comments
 

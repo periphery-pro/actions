@@ -42,6 +42,11 @@ on:
         required: false
         type: boolean
         default: true
+      comment_on_empty:
+        description: Post the pull-request comment even when the scan found no results.
+        required: false
+        type: boolean
+        default: true
 
 permissions: {}
 
@@ -215,7 +220,7 @@ jobs:
 
       - name: Render job summary
         if: github.event_name == 'pull_request' && steps.scan.outcome == 'success'
-        uses: periphery-pro/actions/render-report@v1
+        uses: periphery-pro/actions/render-report@skip-empty-comment
         with:
           annotations: ${{ runner.temp }}/periphery-output.txt
           baseline_commit: ${{ steps.baseline.outputs.available == 'true' && steps.baseline.outputs.merge_base || '' }}
@@ -232,7 +237,7 @@ jobs:
 
       - name: Render pull-request comment
         if: github.event_name == 'pull_request' && steps.scan.outcome == 'success' && inputs.post_comment
-        uses: periphery-pro/actions/render-report@v1
+        uses: periphery-pro/actions/render-report@skip-empty-comment
         with:
           annotations: ${{ runner.temp }}/periphery-output.txt
           baseline_commit: ${{ steps.baseline.outputs.available == 'true' && steps.baseline.outputs.merge_base || '' }}
@@ -244,6 +249,7 @@ jobs:
           pull_request_url: ${{ github.event.pull_request.html_url }}
           repository: ${{ github.repository }}
           run_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          skip_empty: ${{ !inputs.comment_on_empty }}
           target: comment
           toolchain_file: ${{ runner.temp }}/periphery-toolchain.txt
 
