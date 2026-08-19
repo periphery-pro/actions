@@ -17,7 +17,7 @@ on:
         description: GitHub-hosted macOS runner label to scan on, for example `macos-26`.
         required: false
         type: string
-        default: macos-15
+        default: macos-latest
       xcode_version:
         description: Xcode version to build with, for example `26.3`. Defaults to the runner's preselected Xcode.
         required: false
