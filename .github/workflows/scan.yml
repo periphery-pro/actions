@@ -13,6 +13,11 @@ on:
         required: false
         type: boolean
         default: false
+      xcode_version:
+        description: Xcode version to build with, for example `26.3`. Defaults to the runner's preselected Xcode.
+        required: false
+        type: string
+        default: ""
       setup:
         description: Bash script to run in the caller repository before scanning.
         required: false
@@ -49,6 +54,20 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           submodules: ${{ inputs.checkout_submodules && 'recursive' || 'false' }}
+
+      - name: Select Xcode
+        if: inputs.xcode_version != ''
+        env:
+          XCODE_VERSION: ${{ inputs.xcode_version }}
+        run: |
+          set -euo pipefail
+          app="/Applications/Xcode_${XCODE_VERSION}.app"
+          if [[ ! -d "$app" ]]; then
+            echo "Xcode $XCODE_VERSION is not installed on this runner. Installed versions:" >&2
+            ls -d /Applications/Xcode*.app >&2
+            exit 1
+          fi
+          sudo xcode-select --switch "$app"
 
       - name: Run setup
         if: inputs.setup != ''
