@@ -69,6 +69,7 @@ permissions: {}
 
 jobs:
   comment:
+    if: github.event.workflow_run.event == 'pull_request'
     permissions:
       actions: read
       pull-requests: write
